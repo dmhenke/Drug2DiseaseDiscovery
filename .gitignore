@@ -1,0 +1,30 @@
+# OS and editor
+.DS_Store
+
+# Session transcripts (contain conversation content and HMAC audit lines)
+audit.jsonl
+
+# Uploads and scratch
+uploads/
+uploads-tmp/
+*.log
+bench/
+
+# Large, regenerable, or model data (see docs/RUNBOOK.md)
+*.h5ad
+*.rds
+*.torch
+*.pt
+*.npz
+*.pkl
+*.tar
+*.tar.gz
+studies/*/data/**
+studies/*/interim/**
+studies/*/results/**
+shared/models/**
+shared/references/**
+!.gitkeep
+pipeline/UCE/
+!studies/*/interim/uce/
+!studies/*/interim/uce/.gitkeep
