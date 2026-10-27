@@ -100,4 +100,6 @@ if (isTRUE(COMPARE_ORTHOLOGS) && all(c("human", "mouse") %in% names(results)) &&
     !is.null(results$human) && !is.null(results$mouse))
   compare_orthologs(results$human, results$mouse)
 writeLines(all_notes, file.path(RESULTS, "warnings.txt"))
+if (all(vapply(results, is.null, TRUE)))
+  stop("No cell type was testable in any species; see ", file.path(RESULTS, "warnings.txt"))
 message("\nResults written to ", RESULTS, "/")

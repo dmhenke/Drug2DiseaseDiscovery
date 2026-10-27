@@ -50,7 +50,13 @@ clusters <- factor(membership(comm))
 message("Found ", nlevels(clusters), " joint clusters")
 
 ## ---- annotation ----
-if (!is.null(REFERENCE)) {
+CELL_TYPE_COL <- get0("CELL_TYPE_COL", ifnotfound = NULL)
+if (!is.null(CELL_TYPE_COL)) {
+  ## Trusted labels (author annotation or fixture truth). Clusters are kept as a cross-check.
+  cell_type <- unlist(lapply(sces, function(s) as.character(colData(s)[[CELL_TYPE_COL]])))
+  message("Cell types from obs column '", CELL_TYPE_COL, "'. Joint clusters vs labels:")
+  print(table(cluster = clusters, label = cell_type))
+} else if (!is.null(REFERENCE)) {
   ref <- readH5AD(if (grepl("^(/|~)", REFERENCE)) REFERENCE else file.path(STUDY_DIR, REFERENCE),
                   use_hdf5 = FALSE)
   refE <- get_uce(ref); refLab <- as.character(colData(ref)[[REF_LABEL_COL]])
@@ -69,6 +75,15 @@ message("\nStudies per cell type (want > 1):")
 print(sort(tapply(meta$study, meta$cell_type, function(x) length(unique(x)))))
 message("Species per cell type (2 = co-embedded across species):")
 print(sort(tapply(meta$species, meta$cell_type, function(x) length(unique(x)))))
+## Expectation: every cell type holds both conditions. A one-condition type cannot be tested in
+## Stage 3; a strong disease state (e.g. lupus IFN-high monocytes) does this to unsupervised clusters.
+meta$condition <- unlist(lapply(sces, function(s) as.character(s$condition)))
+cond_tab <- table(meta$cell_type, meta$condition)
+message("Cells per cell type x condition:"); print(cond_tab)
+pure <- rownames(cond_tab)[rowSums(cond_tab > 0) < 2]
+if (length(pure))
+  message(sprintf("WARNING: %d of %d cell types contain one condition only (%s); clusters track condition, not cell type. Set CELL_TYPE_COL or REFERENCE.",
+                  length(pure), nrow(cond_tab), paste(pure, collapse = ", ")))
 
 split_lab <- split(meta$cell_type, meta$species)
 for (sp in species) {

@@ -17,6 +17,7 @@ MIN_GENES_PER_CELL <- 50     # 500-gene fixture; the paper's 200 would drop most
 MIN_CELLS_PER_GENE <- 10
 K_NN <- 30
 CLUSTER_FUN <- "louvain"
+CELL_TYPE_COL <- "true_type"  # T0 tests DE given cell types; PCA cannot test clustering
 REFERENCE <- NULL
 REF_LABEL_COL <- "cell_type"
 K_TRANSFER <- 30

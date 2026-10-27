@@ -28,6 +28,7 @@ MIN_CELLS_PER_GENE <- 10
 ## ---- INTEGRATION / CLUSTERING (Stage 2) -----------------------------------
 K_NN          <- 30
 CLUSTER_FUN   <- "louvain"
+# CELL_TYPE_COL <- "cell_type"  # obs column of trusted labels (CELLxGENE author annotation); NULL = clusters
 REFERENCE     <- NULL              # path to a UCE-embedded reference atlas, or NULL
 REF_LABEL_COL <- "cell_type"
 K_TRANSFER    <- 30

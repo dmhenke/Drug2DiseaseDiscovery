@@ -2,7 +2,9 @@
 """Build the synthetic T0 fixture. No downloads; fixed seed.
 
 3 studies x 6 donors (3 per condition) x cells-per-donor cells, 500 genes, raw NB counts in X.
-Planted truth: 40 genes with log2FC = +/-2 in diseased cells (every cell type).
+3 cell types (typeA/B/C), each with 40 marker genes at log2FC +3; every donor contributes all three,
+so clustering must recover types across donors and conditions. Truth label kept in obs["true_type"].
+Planted truth: 40 genes (disjoint from markers) with log2FC = +/-2 in diseased cells, every cell type.
 Study C has a batch effect: 60 non-planted genes x3.
 Study B uses Ensembl IDs with symbols in feature_name (tests symbols_from).
 Writes studies/synthetic_t0/data/*.h5ad, planted_truth.tsv, and config.R.
@@ -17,7 +19,7 @@ import numpy as np
 import pandas as pd
 
 p = argparse.ArgumentParser()
-p.add_argument("--cells-per-donor", type=int, default=110)
+p.add_argument("--cells-per-donor", type=int, default=120)
 p.add_argument("--seed", type=int, default=1234)
 a = p.parse_args()
 
@@ -28,12 +30,18 @@ os.makedirs(DATA, exist_ok=True)
 rng = np.random.default_rng(a.seed)
 
 G, N_PLANT, N_BATCH, N_DISP = 500, 40, 60, 5.0  # N_DISP = NB size parameter
+TYPES, N_MARK = ["typeA", "typeB", "typeC"], 40
 symbols = [f"GENE{i:04d}" for i in range(G)]
 base = rng.gamma(2.0, 1.0, G) + 0.05
-planted = rng.choice(G, N_PLANT, replace=False)
+perm = rng.permutation(G)
+planted = perm[:N_PLANT]
+markers = perm[N_PLANT:N_PLANT + N_MARK * len(TYPES)].reshape(len(TYPES), N_MARK)
 sign = rng.choice([-1.0, 1.0], N_PLANT)
 lfc = np.zeros(G)
 lfc[planted] = sign * 2.0 * np.log(2)  # log2FC of +/-2, stored as natural log
+type_lfc = np.zeros((len(TYPES), G))
+for t in range(len(TYPES)):
+    type_lfc[t, markers[t]] = 3.0 * np.log(2)
 batch = rng.choice(np.setdiff1d(np.arange(G), planted), N_BATCH, replace=False)
 
 pd.DataFrame({"gene": [symbols[i] for i in planted], "log2FC": sign * 2.0}).to_csv(
@@ -47,7 +55,7 @@ STUDIES = {
 }
 
 for name, (dcol, ccol, labels, ens, batch_on) in STUDIES.items():
-    blocks, donors, conds = [], [], []
+    blocks, donors, conds, types = [], [], [], []
     for diseased, lab in ((False, labels[0]), (True, labels[1])):
         for k in range(3):
             did = f"{name}_{lab}{k}"
@@ -55,13 +63,15 @@ for name, (dcol, ccol, labels, ens, batch_on) in STUDIES.items():
             mu = base * donor_eff * np.exp(lfc * diseased)
             if batch_on:
                 mu[batch] *= 3
+            t = np.arange(a.cells_per_donor) % len(TYPES)  # equal share of each type per donor
             scale = np.exp(rng.normal(0, 0.3, a.cells_per_donor))
-            cell_mu = scale[:, None] * mu[None, :]
+            cell_mu = scale[:, None] * mu[None, :] * np.exp(type_lfc[t])
             blocks.append(rng.negative_binomial(N_DISP, N_DISP / (N_DISP + cell_mu)))
             donors += [did] * a.cells_per_donor
             conds += [lab] * a.cells_per_donor
+            types += [TYPES[i] for i in t]
     X = np.vstack(blocks).astype(np.float32)
-    obs = pd.DataFrame({dcol: donors, ccol: conds},
+    obs = pd.DataFrame({dcol: donors, ccol: conds, "true_type": types},
                        index=[f"{name}_c{i}" for i in range(X.shape[0])])
     var = pd.DataFrame(index=[f"ENSG{i:011d}" for i in range(G)] if ens else symbols)
     if ens:
@@ -88,6 +98,7 @@ MIN_GENES_PER_CELL <- 50     # 500-gene fixture; the paper's 200 would drop most
 MIN_CELLS_PER_GENE <- 10
 K_NN <- 30
 CLUSTER_FUN <- "louvain"
+CELL_TYPE_COL <- "true_type"  # T0 tests DE given cell types; PCA cannot test clustering
 REFERENCE <- NULL
 REF_LABEL_COL <- "cell_type"
 K_TRANSFER <- 30

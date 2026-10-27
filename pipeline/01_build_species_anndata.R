@@ -69,6 +69,12 @@ load_one <- function(cfg) {
   sce$sample_id <- paste0(cfg$study, "::", as.character(sce$sample_id))
 
   keep_cols <- c("study", "species", "sample_id", "condition")
+  ct_col <- get0("CELL_TYPE_COL", ifnotfound = NULL)
+  if (!is.null(ct_col)) {
+    if (!ct_col %in% colnames(colData(sce)))
+      stop(cfg$path, ": CELL_TYPE_COL '", ct_col, "' not in obs (after obs_map).")
+    keep_cols <- c(keep_cols, ct_col)
+  }
   sce2 <- SingleCellExperiment(
     assays = list(counts = assay(sce, "counts")),
     colData = colData(sce)[, keep_cols, drop = FALSE])
