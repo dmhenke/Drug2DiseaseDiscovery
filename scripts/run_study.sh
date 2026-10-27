@@ -20,7 +20,13 @@ main() {
   echo "host: $(uname -srm) | started: $(date '+%Y-%m-%dT%H:%M:%S%z')"
   echo "code: $(cd "$ROOT" && cat pipeline/*.R pipeline/*.sh scripts/*.py scripts/*.sh | shasum -a 256 | cut -c1-16)"
   echo "params: BATCH=${BATCH:-25} UCE_NLAYERS=${UCE_NLAYERS:-33} SHARD_CELLS=${SHARD_CELLS:-none} UCE_SEED=${UCE_SEED:-1234}"
-  echo "git: not a repository, so no dirty-tree check; code hash above is the version"
+  if git -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1; then
+    local dirty; dirty="$(git -C "$ROOT" status --porcelain --untracked-files=no -- pipeline scripts studies)"
+    echo "git: $(git -C "$ROOT" rev-parse --short HEAD)${dirty:+ DIRTY (uncommitted changes below)}"
+    if [ -n "$dirty" ]; then echo "WARNING: dirty tree; numbers from this run do not match any commit"; echo "$dirty"; fi
+  else
+    echo "git: not a repository, so no dirty-tree check; code hash above is the version"
+  fi
   "$ROOT/scripts/preflight.sh" "$STUDY_DIR"
   echo "--- stage 0"
   Rscript "$ROOT/pipeline/01_build_species_anndata.R" "$STUDY_DIR"
