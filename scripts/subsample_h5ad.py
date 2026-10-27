@@ -10,6 +10,9 @@ Usage:
       --donors-per-condition 5 --max-cells-per-donor 2000 [--counts raw|X] [--seed 1234] [--dry-run]
   --all-donors   use every donor (full cohort)
   --max-cells-per-donor 0   no cap
+  --where COL=VALUE   keep only cells with obs[COL] == VALUE before choosing donors (repeatable)
+  --drop-donors-spanning COL   drop donors whose cells span >1 value of COL (checked before --where),
+                               so a donor split across batch files cannot be counted twice
 """
 import argparse
 import datetime
@@ -36,6 +39,8 @@ def main():
     p.add_argument("--max-cells-per-donor", type=int, default=2000, help="0 = no cap")
     p.add_argument("--counts", choices=["raw", "X"], default="raw")
     p.add_argument("--seed", type=int, default=1234)
+    p.add_argument("--where", action="append", default=[], metavar="COL=VALUE")
+    p.add_argument("--drop-donors-spanning", metavar="COL")
     p.add_argument("--dry-run", action="store_true")
     a = p.parse_args()
 
@@ -50,6 +55,17 @@ def main():
     if mixed:
         print(f"WARNING: dropping {len(mixed)} donors that carry both conditions", file=sys.stderr)
     ok = (cond != "") & ~np.isin(donor, mixed)
+    if a.drop_donors_spanning:
+        span = pd.Series(src.obs[a.drop_donors_spanning].astype(str).to_numpy()[ok]).groupby(donor[ok]).nunique()
+        multi = list(span[span > 1].index)
+        print(f"dropping {len(multi)} donors spanning >1 {a.drop_donors_spanning}")
+        ok &= ~np.isin(donor, multi)
+    for w in a.where:
+        col, _, val = w.partition("=")
+        if col not in src.obs.columns:
+            sys.exit(f"ERROR: --where column '{col}' not in obs")
+        ok &= src.obs[col].astype(str).to_numpy() == val
+        print(f"--where {col}={val}: {int(ok.sum())} cells left")
     rng = np.random.default_rng(a.seed)
 
     chosen = {}
@@ -91,11 +107,13 @@ def main():
         sys.exit("ERROR: selected matrix is not non-negative integer counts")
 
     out = ad.AnnData(X=sub.astype(np.float32), obs=src.obs.iloc[keep].copy(), var=var.copy())
+    os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)  # data/ is gitignored, absent in a fresh clone
     out.write_h5ad(a.out)
     man = {
         "source": os.path.abspath(a.src), "source_bytes": os.path.getsize(a.src),
         "output": os.path.abspath(a.out), "cells": int(len(keep)),
-        "counts_from": a.counts, "seed": a.seed, "max_cells_per_donor": a.max_cells_per_donor,
+        "counts_from": a.counts, "seed": a.seed, "where": a.where,
+        "drop_donors_spanning": a.drop_donors_spanning, "max_cells_per_donor": a.max_cells_per_donor,
         "donors": chosen,
         "created": datetime.datetime.now().isoformat(timespec="seconds"),
     }

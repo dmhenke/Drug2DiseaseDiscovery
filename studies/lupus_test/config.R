@@ -1,12 +1,12 @@
-## config.R -- lupus TEST subsample (MACHINE TEST). Input: data/lupus_test.h5ad from
-## scripts/subsample_h5ad.py. CHECK: obs column names and labels below are CELLxGENE
-## conventions, NOT verified against the file. Run the dry-run and edit before use.
+## config.R -- lupus TEST subsample (MACHINE TEST), Perez 2022 PBMC (CELLxGENE c55dc602).
+## Processing_Cohort 1 is healthy-only, so it is excluded; cohorts 2-4 hold both conditions and each
+## is its own "study", so ~ study + condition adjusts for processing batch. Female, European American
+## only: male and Asian cells are SLE-heavy (obs crosstab, 2026-10-27). Built by scripts/subsample_h5ad.py.
 STUDY_NAME <- "lupus_test"
-INPUTS <- list(
-  list(path = "data/lupus_test.h5ad", study = "lupus_test", species = "human",
-       obs_map = c(donor_id = "sample_id", disease = "condition"),  # CHECK
-       symbols_from = "feature_name", counts_assay = "X")            # CHECK: var layout
-)
+cohort <- function(k) list(path = sprintf("data/lupus_c%d.h5ad", k), study = sprintf("cohort%d", k),
+  species = "human", obs_map = c(donor_id = "sample_id", disease = "condition"),
+  symbols_from = "feature_name", counts_assay = "X")
+INPUTS <- lapply(2:4, cohort)
 CONDITION_MAP <- c(normal = "healthy", healthy = "healthy",
                    "systemic lupus erythematosus" = "diseased", diseased = "diseased")
 MIN_GENES_PER_CELL <- 200
