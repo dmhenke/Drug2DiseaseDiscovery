@@ -17,6 +17,8 @@ OUT="$ROOT/bench/$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$OUT"
 SP=human; case "$(basename "$IN")" in *mouse*) SP=mouse ;; esac
 if [ "$(uname -s)" = Darwin ]; then TIME=(/usr/bin/time -l); else TIME=(/usr/bin/time -v); fi
+[ -x /usr/bin/time ] || TIME=()  # minimal Ubuntu lacks GNU time (apt install time); host RSS then unreported
+trap 'kill $(jobs -p) 2>/dev/null || true' EXIT
 
 {
   echo "device: $("$PY" -c 'from accelerate import Accelerator; print(Accelerator().device)')"
@@ -26,14 +28,20 @@ if [ "$(uname -s)" = Darwin ]; then TIME=(/usr/bin/time -l); else TIME=(/usr/bin
 for M in "$N" "$((2 * N))"; do
   SUB="$OUT/sub_${M}.h5ad"; RUN="$OUT/run_${M}"; mkdir -p "$RUN"
   "$PY" -c "import sys, anndata as ad; a = ad.read_h5ad(sys.argv[1], backed='r'); a[:int(sys.argv[3])].to_memory().write_h5ad(sys.argv[2])" "$IN" "$SUB" "$M"
+  # GPU memory sampled every second; whole card, so other processes on it are included
+  if command -v nvidia-smi >/dev/null; then
+    nvidia-smi --query-gpu=memory.used,memory.total --format=csv,noheader,nounits -lms 1000 >"$RUN/gpu.txt" &
+  fi
   START=$(date +%s)
   (cd "$UCE_REPO" && "${TIME[@]}" "$PY" "$ROOT/scripts/uce_seeded.py" \
       --adata_path "$SUB" --dir "$RUN/" --species "$SP" --model_loc "$MODEL" \
       --nlayers "$NLAYERS" --batch_size "$BATCH") >"$RUN/stdout.txt" 2>"$RUN/time.txt" \
     || { echo "FAILED at $M cells; see $RUN/time.txt and $RUN/stdout.txt" | tee -a "$OUT/summary.txt"; exit 1; }
   SECS=$(( $(date +%s) - START ))
+  kill $(jobs -p) 2>/dev/null || true
   RSS=$(grep -i "maximum resident" "$RUN/time.txt" | head -1 | sed 's/^[[:space:]]*//')
-  echo "cells=$M seconds=$SECS peak=[$RSS]" | tee -a "$OUT/summary.txt"
+  GPU=$( [ -s "$RUN/gpu.txt" ] && sort -t, -k1 -n "$RUN/gpu.txt" | tail -1 | awk -F', *' '{print $1 "/" $2 " MiB"}' || true )
+  echo "cells=$M seconds=$SECS peak=[$RSS] gpu_peak=[${GPU:-n/a}]" | tee -a "$OUT/summary.txt"
 done
 
 "$PY" - "$OUT/summary.txt" <<'PYEOF' | tee -a "$OUT/summary.txt"

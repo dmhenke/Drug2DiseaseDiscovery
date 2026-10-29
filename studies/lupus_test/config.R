@@ -13,7 +13,7 @@ MIN_GENES_PER_CELL <- 200
 MIN_CELLS_PER_GENE <- 10
 K_NN <- 30
 CLUSTER_FUN <- "louvain"
-# CELL_TYPE_COL <- "cell_type"  # obs column of trusted labels (CELLxGENE author annotation); NULL = clusters
+CELL_TYPE_COL <- "cell_type"  # UCE test: DE on CELLxGENE labels; Stage 2 prints UCE clusters vs labels
 REFERENCE <- NULL
 REF_LABEL_COL <- "cell_type"
 K_TRANSFER <- 30
