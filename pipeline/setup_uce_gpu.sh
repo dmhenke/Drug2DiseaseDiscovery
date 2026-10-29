@@ -11,9 +11,13 @@ PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 nvidia-smi
 
 # 1. Isolated Python env (Python 3.10)
-conda create -y -n uce python=3.10
+conda env list | grep -q '^uce ' || conda create -y -n uce python=3.10
+# conda's activate scripts read unset vars (PS1), so relax -u around them
+set +u
 # shellcheck disable=SC1091
 source "$(conda info --base)/etc/profile.d/conda.sh"; conda activate uce
+set -u
+[ "$(command -v python)" = "$(conda info --base)/envs/uce/bin/python" ] || { echo "conda activate uce failed" >&2; exit 1; }
 
 # 2. CUDA-matched PyTorch (match the CUDA version nvidia-smi prints; cu121 shown)
 pip install torch==2.1.1 --index-url https://download.pytorch.org/whl/cu121
