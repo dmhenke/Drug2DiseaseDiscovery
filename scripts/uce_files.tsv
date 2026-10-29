@@ -1,0 +1,8 @@
+# UCE files from figshare article 24320806 (sizes and md5 from api.figshare.com/v2/articles/24320806/files, 2026-10-29).
+# where: model = shared/models/ (or UCE_MODEL), repo = pipeline/UCE/model_files/ (UCE's default paths)
+# id	where	name	bytes	md5
+43423236	model	33l_8ep_1024t_1280.torch	5686283829	eed62d4fe51873c87bcf9660faa07707
+42706585	repo	all_tokens.torch	2979205876	3523ea431c403f95701b6eeb0c30b997
+42715213	repo	protein_embeddings.tar.gz	2735410523	6756d7fa8348e0f70b5e5b11e324f023
+42706558	repo	species_chrom.csv	4097781	42a9b5871b1ed955fd05414b3ab89081
+42706555	repo	species_offsets.pkl	139	ddf9143508857e62607f323b338ff383

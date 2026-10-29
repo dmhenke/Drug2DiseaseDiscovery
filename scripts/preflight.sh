@@ -45,9 +45,15 @@ else
     *)        bad "could not query torch device" ;;
   esac
   MODEL="${UCE_MODEL:-$ROOT/shared/models/33l_8ep_1024t_1280.torch}"
-  if [ -f "$MODEL" ]; then ok "weights: $MODEL"; else bad "weights missing: $MODEL (download needs approval)"; fi
   REPO="${UCE_REPO:-$ROOT/pipeline/UCE}"
   if [ -f "$REPO/eval_single_anndata.py" ]; then ok "UCE repo: $REPO"; else bad "UCE repo missing: $REPO"; fi
+  # size against scripts/uce_files.tsv: a 0-byte figshare WAF response "exists" but is not the file
+  while IFS=$'\t' read -r _ where name bytes _; do
+    if [ "$where" = model ]; then f="$MODEL"; else f="$REPO/model_files/$name"; fi
+    have=$( [ -f "$f" ] && wc -c <"$f" | tr -d ' ' || echo missing)
+    if [ "$have" = "$bytes" ]; then ok "$name"; else bad "$name: $have (bytes), expected $bytes (scripts/fetch_uce_files.sh)"; fi
+  done < <(grep -v '^#' "$ROOT/scripts/uce_files.tsv")
+  if [ -d "$REPO/model_files/protein_embeddings" ]; then ok "protein_embeddings/ extracted"; else bad "protein_embeddings/ not extracted (scripts/fetch_uce_files.sh)"; fi
   if [ "$RAM_GB" -lt 24 ]; then warn "${RAM_GB} GB RAM: model load may peak near 10-12 GB (inferred); close other apps; use BATCH=4"; fi
 fi
 

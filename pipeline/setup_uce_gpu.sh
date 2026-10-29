@@ -24,16 +24,15 @@ cd "$PROJECT_ROOT/pipeline"
 [ -d UCE ] || git clone https://github.com/snap-stanford/UCE.git
 cd UCE && pip install -r requirements.txt
 
-# 4. Put the 33-layer paper weights in the SHARED model dir (used by every study)
-mkdir -p "$PROJECT_ROOT/shared/models"
-echo ">> Download 33l_8ep_1024t_1280.torch into $PROJECT_ROOT/shared/models/"
-echo "   figshare: https://figshare.com/articles/dataset/Universal_Cell_Embedding_Model_Files/24320806"
+# 4. 33-layer weights + UCE support files (~11.4 GB), md5-verified. Not UCE's own downloader:
+#    figshare.com answers scripts with an empty 202 and UCE would cache the empty files.
+"$PROJECT_ROOT/scripts/fetch_uce_files.sh"
 
 # 5. Accelerate config (single-GPU defaults are fine)
 accelerate config default || accelerate config
 
-# 6. Smoke test on the bundled demo (downloads ESM2 protein + gene tables)
-python eval_single_anndata.py
+# 6. No demo smoke test: with no args UCE fetches the 4-layer model and demo data through the
+#    blocked figshare host. scripts/preflight.sh + scripts/benchmark_uce.sh are the smoke test.
 
 echo ">> Setup complete. Embed a study with:  pipeline/run_uce.sh studies/<name>"
 echo ">> If CUDA out-of-memory: lower BATCH (e.g. BATCH=8 pipeline/run_uce.sh studies/lung)"
