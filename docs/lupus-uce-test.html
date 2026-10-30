@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lupus UCE Test</title>
+<meta name="description" content="Test of the UCE embedding step of the Drug2DiseaseDiscovery pipeline on Perez 2022 lupus PBMC, cohort 4, 20 vs 20 donors.">
+<style>
+:root {
+  --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --ink-3: #74736e;
+  --rule: #e4e3de; --chip: #f0efec;
+  --s1: #cde2fb; --s2: #9ec5f4; --s3: #5598e7; --s4: #1c5cab;
+  --s1-ink: #0b0b0b; --s2-ink: #0b0b0b; --s3-ink: #0b0b0b; --s4-ink: #ffffff;
+  --series-1: #2a78d6; --series-2: #eb6834;
+  --known: #1c5cab; --inferred: #6250d6; --guess: #8a5a00;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --ink-3: #9a998f;
+    --rule: #2e2e2b; --chip: #262624;
+    --s1: #184f95; --s2: #256abf; --s3: #5598e7; --s4: #9ec5f4;
+    --s1-ink: #f0efec; --s2-ink: #ffffff; --s3-ink: #0b0b0b; --s4-ink: #0b0b0b;
+    --series-1: #3987e5; --series-2: #d95926;
+    --known: #86b6ef; --inferred: #9085e9; --guess: #eda100;
+  }
+}
+:root[data-theme="dark"] {
+  --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --ink-3: #9a998f;
+  --rule: #2e2e2b; --chip: #262624;
+  --s1: #184f95; --s2: #256abf; --s3: #5598e7; --s4: #9ec5f4;
+  --s1-ink: #f0efec; --s2-ink: #ffffff; --s3-ink: #0b0b0b; --s4-ink: #0b0b0b;
+  --series-1: #3987e5; --series-2: #d95926;
+  --known: #86b6ef; --inferred: #9085e9; --guess: #eda100;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink);
+  font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 920px; margin: 0 auto; padding: 32px 16px 64px; }
+h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 6px; letter-spacing: -0.01em; }
+h2 { font-size: 1.25rem; margin: 48px 0 12px; padding-top: 16px; border-top: 1px solid var(--rule); }
+h3 { font-size: 1rem; margin: 24px 0 8px; }
+p, li { color: var(--ink); max-width: 72ch; }
+.sub { color: var(--ink-2); margin: 0 0 24px; }
+.muted { color: var(--ink-3); font-weight: 400; }
+code { font: 0.88em ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--chip); padding: 1px 5px; border-radius: 4px; }
+.summary { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 18px 22px; }
+.summary ul { margin: 0; padding-left: 20px; }
+.summary li + li { margin-top: 8px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 20px 0 0; }
+.tile { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 14px 16px; }
+.tile b { display: block; font-size: 1.7rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.tile span { color: var(--ink-2); font-size: 0.88rem; }
+.tag { display: inline-block; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase;
+  border: 1px solid currentColor; border-radius: 4px; padding: 0 5px; margin-left: 4px; vertical-align: 1px; }
+.tag.k { color: var(--known); } .tag.i { color: var(--inferred); } .tag.g { color: var(--guess); }
+.scroll { overflow-x: auto; margin: 12px 0; -webkit-overflow-scrolling: touch; }
+table { border-collapse: collapse; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+.plain { width: 100%; }
+.plain th, .plain td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+.plain thead th { color: var(--ink-2); font-weight: 600; font-size: 0.82rem; border-bottom: 1px solid var(--ink-3); }
+.plain td.genes { color: var(--ink-2); font-size: 0.82rem; min-width: 220px; }
+.heat { border-collapse: separate; border-spacing: 2px; }
+.heat th { font-weight: 500; font-size: 0.8rem; color: var(--ink-2); padding: 4px 6px; text-align: left; white-space: nowrap; }
+.heat thead th { vertical-align: bottom; white-space: normal; min-width: 64px; line-height: 1.25; }
+.heat td { width: 64px; height: 30px; text-align: center; border-radius: 4px; font-size: 0.82rem; cursor: default; }
+.heat td.s0, .heat td.na { background: var(--chip); color: var(--ink-3); }
+.heat td.s1 { background: var(--s1); color: var(--s1-ink); } .heat td.s2 { background: var(--s2); color: var(--s2-ink); }
+.heat td.s3 { background: var(--s3); color: var(--s3-ink); } .heat td.s4 { background: var(--s4); color: var(--s4-ink); }
+.heat td.sig { font-weight: 700; }
+.heat td:hover { outline: 2px solid var(--ink); outline-offset: -1px; }
+.dot { font-size: 0.6rem; margin-left: 3px; vertical-align: 2px; }
+.clus td { width: 70px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; font-size: 0.82rem; color: var(--ink-2); margin: 6px 0; }
+.sw { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: -2px; margin-right: 5px; }
+.bars { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 14px 16px; margin: 12px 0; }
+.brow { display: grid; grid-template-columns: 130px 1fr 36px; align-items: center; gap: 10px; padding: 4px 0; }
+.brow:hover .blab { color: var(--ink); font-weight: 600; }
+.blab { font-size: 0.85rem; color: var(--ink-2); }
+.btrack { display: flex; gap: 2px; height: 16px; }
+.bseg { display: block; height: 100%; }
+.bseg:first-child { border-radius: 0; } .bseg:last-child { border-radius: 0 4px 4px 0; }
+.bseg.other { background: var(--series-1); } .bseg.ribo { background: var(--series-2); }
+.bval { font-size: 0.85rem; text-align: right; }
+.callout { border-left: 3px solid var(--ink-3); padding: 2px 0 2px 14px; margin: 16px 0; color: var(--ink-2); }
+footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--rule); color: var(--ink-3); font-size: 0.85rem; }
+@media (max-width: 560px) {
+  h1 { font-size: 1.5rem; }
+  .brow { grid-template-columns: 96px 1fr 30px; }
+}
+</style>
+</head>
+<body>
+<main>
+<header>
+<h1>Lupus UCE test run</h1>
+<p class="sub">Drug2DiseaseDiscovery pipeline · Stage 1 (UCE embedding) tested on Perez 2022 SLE PBMC, cohort 4, 20 SLE vs 20 healthy donors · run of 2026-10-29</p>
+</header>
+
+<section class="summary" aria-label="Summary">
+<ul>
+<li><strong>Pass.</strong> The 33-layer UCE model runs end to end on the workstation GPU. The pipeline recovers the lupus interferon signature: <strong>12 of 12</strong> interferon-stimulated genes (ISGs) are up in SLE classical monocytes at padj&nbsp;&lt;&nbsp;0.05, against a bar of 5 set before the run. <span class="tag k">Known</span></li>
+<li><strong>Measured UCE speed: 0.93 cells/s</strong> on a Quadro P4000. The full cohort 4 (option A, about 232k cells) would take about <strong>2.9 days</strong>. All 1.26M cells (option B) would take about <strong>16 days</strong>. <span class="tag k">Rate known</span> <span class="tag g">cell count for A guessed</span></li>
+<li><strong>With author labels as the cell types, the DE does not depend on the embedding.</strong> Recommendation: run cohort 4 in full in PCA mode, and keep UCE for combining datasets that do not share an annotation. <span class="tag i">Inferred from code</span></li>
+<li><strong>Open:</strong> a ribosomal-gene signal, down in SLE in CD4 T and NK cells, may be a shift in which cell types are present. A check of UCE clusters against condition has not been run yet.</li>
+</ul>
+</section>
+
+<div class="tiles">
+<div class="tile"><b>12/12</b><span>ISGs significant in classical monocytes (bar: ≥5)</span></div>
+<div class="tile"><b>0.93</b><span>cells per second, UCE 33-layer, batch 8</span></div>
+<div class="tile"><b>6.0 h</b><span>UCE time for 19,988 cells</span></div>
+<div class="tile"><b>20 v 20</b><span>donors, cohort 4, ≤500 cells each</span></div>
+</div>
+
+<h2>What was tested</h2>
+<p>The pipeline embeds cells with a pretrained foundation model, Universal Cell Embeddings (UCE), and clusters them on that embedding. It then runs pseudobulk DESeq2 per cell type, SLE against healthy. This run asked two questions:</p>
+<ol>
+<li>Does the UCE step run on the workstation, and how fast?</li>
+<li>With UCE in place, does the pipeline still recover an answer key? Here that is the type I interferon signature in SLE monocytes, one of the most replicated findings in lupus.</li>
+</ol>
+<p><strong>UCE is used for projection only.</strong> The published weights are loaded and every cell gets one forward pass with gradients off. Nothing is trained or fine-tuned, and the model never sees disease status. <span class="tag k">Known, from UCE <code>evaluate.py</code></span></p>
+<div class="scroll"><table class="plain">
+<tbody>
+<tr><th scope="row">Data</th><td>Perez et al. 2022, <i>Science</i> 376:eabf1970 (PMID 35389781). CELLxGENE dataset c55dc602, 1.26M PBMCs.</td></tr>
+<tr><th scope="row">Selection</th><td>Female, European American, Processing_Cohort 4. 20 donors per group drawn at random (seed 1234), up to 500 cells each.</td></tr>
+<tr><th scope="row">Why cohort 4 alone</th><td>Cohort 1 has no SLE donors. Ancestry and sex are strongly tied to disease: Asian-ancestry cells are 82% SLE and male cells 88%. And 36 female European American donors were sequenced in more than one cohort, so pooling cohorts would count them twice. One cohort means one batch, with no batch term needed and no donor counted twice.</td></tr>
+<tr><th scope="row">Cells and genes</th><td>19,988 cells (9,994 per group) × 13,658 genes after QC. UCE used the 11,985 genes that have a protein embedding and dropped no cells.</td></tr>
+<tr><th scope="row">Embedding</th><td>UCE 33-layer (<code>33l_8ep_1024t_1280.torch</code>, md5 eed62d4f…), batch 8, seed 1234. Output is 1,280 dimensions.</td></tr>
+<tr><th scope="row">Cell types</th><td>CELLxGENE <code>cell_type</code> labels (<code>CELL_TYPE_COL</code>). Louvain clusters (k = 30) on the UCE embedding are kept as a cross-check.</td></tr>
+<tr><th scope="row">DE</th><td>Pseudobulk sums per donor × cell type. DESeq2 <code>~ condition</code> (one batch). A cell type is tested when it has ≥10 cells per sample and ≥3 samples per group. Benjamini–Hochberg within each cell type, padj &lt; 0.05.</td></tr>
+</tbody></table></div>
+
+<h2>How we got here</h2>
+<div class="scroll"><table class="plain">
+<thead><tr><th>Run</th><th>Embedding</th><th>Cell types</th><th>Result</th></tr></thead>
+<tbody>
+<tr><td>T0 synthetic fixture: 3 studies, planted DE genes, a batch effect</td><td>PCA stand-in</td><td>Fixture truth</td><td>Pass. Planted genes recovered.</td></tr>
+<tr><td>Lupus 5 v 5</td><td>PCA stand-in</td><td>Clusters</td><td>0 DE genes. Too few donors.</td></tr>
+<tr><td>Lupus 20 v 20</td><td>PCA stand-in</td><td>Clusters</td><td>Pass. 13 of 13 ISGs in the monocyte cluster. A repeat run gave identical results.</td></tr>
+<tr><td><strong>Lupus 20 v 20 (this report)</strong></td><td><strong>UCE 33-layer</strong></td><td><strong>Author labels</strong></td><td><strong>Pass. 12 of 12 ISGs in classical monocytes.</strong></td></tr>
+</tbody></table></div>
+
+<h2>Differential expression, SLE vs healthy</h2>
+<p>Seven cell types had enough donors to test. B cells gave 3 significant genes; their file is not included below. Four rare labels were skipped: lymphocyte, plasmablast, pDC, progenitor. Each had fewer than 3 donors per group with ≥10 cells.</p>
+
+<h3>Significant genes per cell type, split by ribosomal/mitochondrial</h3>
+<div class="legend" role="list">
+<span role="listitem"><span class="sw" style="background:var(--series-1)"></span>Other genes</span>
+<span role="listitem"><span class="sw" style="background:var(--series-2)"></span>Ribosomal (RPL/RPS) or mitochondrial (MT-)</span>
+</div>
+<div class="bars" role="img" aria-label="Bar chart of significant DE genes per cell type; the table below gives the values"><div class='brow' title='Classical mono: 68 genes at padj&lt;0.05, 2 ribosomal/mito'><span class='blab'>Classical mono</span><span class='btrack'><span class="bseg other" style="width:97.1%"></span><span class="bseg ribo" style="width:2.9%"></span></span><span class='bval'>68</span></div><div class='brow' title='Non-classical mono: 35 genes at padj&lt;0.05, 5 ribosomal/mito'><span class='blab'>Non-classical mono</span><span class='btrack'><span class="bseg other" style="width:44.1%"></span><span class="bseg ribo" style="width:7.4%"></span></span><span class='bval'>35</span></div><div class='brow' title='CD4 T: 46 genes at padj&lt;0.05, 35 ribosomal/mito'><span class='blab'>CD4 T</span><span class='btrack'><span class="bseg other" style="width:16.2%"></span><span class="bseg ribo" style="width:51.5%"></span></span><span class='bval'>46</span></div><div class='brow' title='CD8 T: 2 genes at padj&lt;0.05, 0 ribosomal/mito'><span class='blab'>CD8 T</span><span class='btrack'><span class="bseg other" style="width:2.9%"></span></span><span class='bval'>2</span></div><div class='brow' title='NK: 38 genes at padj&lt;0.05, 11 ribosomal/mito'><span class='blab'>NK</span><span class='btrack'><span class="bseg other" style="width:39.7%"></span><span class="bseg ribo" style="width:16.2%"></span></span><span class='bval'>38</span></div><div class='brow' title='cDC: 0 genes at padj&lt;0.05, 0 ribosomal/mito'><span class='blab'>cDC</span><span class='btrack'></span><span class='bval'>0</span></div></div>
+<div class="scroll"><table class='plain'><thead><tr><th>Cell type</th><th>Genes tested</th><th>padj&lt;0.05</th><th>Up in SLE</th><th>Of the 12 ISGs</th><th>Ribosomal/mito</th><th>p&lt;0.01 vs chance</th><th>Top genes</th></tr></thead><tbody><tr><th scope='row'>Classical mono</th><td>4,714</td><td>68</td><td>62</td><td>12/12</td><td>2 (2 down)</td><td>221 vs 47</td><td class='genes'>GBP1, IFI27, PARP9, MT2A, EPSTI1, IFI6, PLAC8, ISG15</td></tr><tr><th scope='row'>Non-classical mono</th><td>1,820</td><td>35</td><td>25</td><td>5/12</td><td>5 (4 down)</td><td>83 vs 18</td><td class='genes'>ISG15, IFI6, TNFSF10, IFI27, RBX1, RPL4, B2M, RPS27L</td></tr><tr><th scope='row'>CD4 T</th><td>4,186</td><td>46</td><td>3</td><td>0/12</td><td>35 (35 down)</td><td>135 vs 42</td><td class='genes'>RPL35A, MYL12A, RPL3, RPS27, RPL31, RPS6, FOS, B2M</td></tr><tr><th scope='row'>CD8 T</th><td>2,929</td><td>2</td><td>2</td><td>2/12</td><td>0 (0 down)</td><td>65 vs 29</td><td class='genes'>IFI27, IFI44L</td></tr><tr><th scope='row'>NK</th><td>1,994</td><td>38</td><td>17</td><td>1/12</td><td>11 (10 down)</td><td>106 vs 20</td><td class='genes'>LGALS1, FCER1G, RPS27, CXCR4, SEM1, RPS6, RPS27L, RPS15A</td></tr><tr><th scope='row'>cDC</th><td>969</td><td>0</td><td>0</td><td>0/12</td><td>0 (0 down)</td><td>12 vs 10</td><td class='genes'>—</td></tr></tbody></table></div>
+<p class="muted">“p&lt;0.01 vs chance” compares how many genes reach p&nbsp;&lt;&nbsp;0.01 with the 1% expected if nothing changed. Most cell types show 3–5 times more than chance, so the tests carry real signal. cDCs (270 cells) sit near chance.</p>
+
+<h3>Interferon-stimulated genes, log2 fold change (SLE / healthy)</h3>
+<div class="legend">
+<span><span class="sw" style="background:var(--s1)"></span>&lt;1</span>
+<span><span class="sw" style="background:var(--s2)"></span>1–2</span>
+<span><span class="sw" style="background:var(--s3)"></span>2–3</span>
+<span><span class="sw" style="background:var(--s4)"></span>≥3</span>
+<span><b>●</b> padj &lt; 0.05</span>
+<span><span class="sw" style="background:var(--chip)"></span>– not tested (filtered for low counts)</span>
+</div>
+<div class="scroll"><table class='heat'><thead><tr><th></th><th scope='col'>Classical mono</th><th scope='col'>Non-classical mono</th><th scope='col'>CD4 T</th><th scope='col'>CD8 T</th><th scope='col'>NK</th><th scope='col'>cDC</th></tr></thead><tbody><tr><th scope='row'>IFI44L</th><td class='s3 sig' title='IFI44L in Classical mono: log2FC 2.31, padj 0.00065'>2.3<span class="dot" aria-label="significant">●</span></td><td class='s3' title='IFI44L in Non-classical mono: log2FC 2.15, padj nan'>2.1</td><td class='s3' title='IFI44L in CD4 T: log2FC 2.55, padj nan'>2.5</td><td class='s3 sig' title='IFI44L in CD8 T: log2FC 2.43, padj 0.013'>2.4<span class="dot" aria-label="significant">●</span></td><td class='s4' title='IFI44L in NK: log2FC 3.22, padj nan'>3.2</td><td class='na' title='not tested (filtered: low counts)'>–</td></tr><tr><th scope='row'>IFI6</th><td class='s2 sig' title='IFI6 in Classical mono: log2FC 1.83, padj 0.00041'>1.8<span class="dot" aria-label="significant">●</span></td><td class='s2 sig' title='IFI6 in Non-classical mono: log2FC 1.93, padj 0.00059'>1.9<span class="dot" aria-label="significant">●</span></td><td class='s1' title='IFI6 in CD4 T: log2FC 0.93, padj nan'>0.9</td><td class='s1' title='IFI6 in CD8 T: log2FC 0.69, padj 0.22'>0.7</td><td class='s2' title='IFI6 in NK: log2FC 1.03, padj nan'>1.0</td><td class='s2' title='IFI6 in cDC: log2FC 1.64, padj 0.95'>1.6</td></tr><tr><th scope='row'>ISG15</th><td class='s2 sig' title='ISG15 in Classical mono: log2FC 1.72, padj 0.00049'>1.7<span class="dot" aria-label="significant">●</span></td><td class='s3 sig' title='ISG15 in Non-classical mono: log2FC 2.00, padj 0.00031'>2.0<span class="dot" aria-label="significant">●</span></td><td class='s2' title='ISG15 in CD4 T: log2FC 1.04, padj nan'>1.0</td><td class='s1' title='ISG15 in CD8 T: log2FC 0.70, padj 0.2'>0.7</td><td class='s1' title='ISG15 in NK: log2FC 0.58, padj 0.15'>0.6</td><td class='s2' title='ISG15 in cDC: log2FC 1.42, padj 0.95'>1.4</td></tr><tr><th scope='row'>MX1</th><td class='s2 sig' title='MX1 in Classical mono: log2FC 1.36, padj 0.036'>1.4<span class="dot" aria-label="significant">●</span></td><td class='s2' title='MX1 in Non-classical mono: log2FC 1.55, padj nan'>1.5</td><td class='s2' title='MX1 in CD4 T: log2FC 1.35, padj nan'>1.4</td><td class='s2' title='MX1 in CD8 T: log2FC 1.07, padj 0.44'>1.1</td><td class='na' title='not tested (filtered: low counts)'>–</td><td class='na' title='not tested (filtered: low counts)'>–</td></tr><tr><th scope='row'>IFIT1</th><td class='s3 sig' title='IFIT1 in Classical mono: log2FC 2.42, padj 0.0095'>2.4<span class="dot" aria-label="significant">●</span></td><td class='na' title='not tested (filtered: low counts)'>–</td><td class='na' title='not tested (filtered: low counts)'>–</td><td class='na' title='not tested (filtered: low counts)'>–</td><td class='na' title='not tested (filtered: low counts)'>–</td><td class='na' title='not tested (filtered: low counts)'>–</td></tr><tr><th scope='row'>IFIT3</th><td class='s3 sig' title='IFIT3 in Classical mono: log2FC 2.75, padj 0.00061'>2.8<span class="dot" aria-label="significant">●</span></td><td class='s2' title='IFIT3 in Non-classical mono: log2FC 1.97, padj nan'>2.0</td><td class='s2' title='IFIT3 in CD4 T: log2FC 1.48, padj nan'>1.5</td><td class='na' title='not tested (filtered: low counts)'>–</td><td class='na' title='not tested (filtered: low counts)'>–</td><td class='na' title='not tested (filtered: low counts)'>–</td></tr><tr><th scope='row'>LY6E</th><td class='s2 sig' title='LY6E in Classical mono: log2FC 1.40, padj 0.0013'>1.4<span class="dot" aria-label="significant">●</span></td><td class='s1 sig' title='LY6E in Non-classical mono: log2FC 0.83, padj 0.018'>0.8<span class="dot" aria-label="significant">●</span></td><td class='s1' title='LY6E in CD4 T: log2FC 0.62, padj nan'>0.6</td><td class='s1' title='LY6E in CD8 T: log2FC 0.56, padj 0.2'>0.6</td><td class='s1 sig' title='LY6E in NK: log2FC 0.58, padj 0.017'>0.6<span class="dot" aria-label="significant">●</span></td><td class='s1' title='LY6E in cDC: log2FC 0.79, padj 0.95'>0.8</td></tr><tr><th scope='row'>OAS1</th><td class='s1 sig' title='OAS1 in Classical mono: log2FC 0.98, padj 0.018'>1.0<span class="dot" aria-label="significant">●</span></td><td class='s1 sig' title='OAS1 in Non-classical mono: log2FC 0.89, padj 0.015'>0.9<span class="dot" aria-label="significant">●</span></td><td class='s2' title='OAS1 in CD4 T: log2FC 1.68, padj nan'>1.7</td><td class='na' title='not tested (filtered: low counts)'>–</td><td class='na' title='not tested (filtered: low counts)'>–</td><td class='na' title='not tested (filtered: low counts)'>–</td></tr><tr><th scope='row'>STAT1</th><td class='s1 sig' title='STAT1 in Classical mono: log2FC 0.68, padj 0.024'>0.7<span class="dot" aria-label="significant">●</span></td><td class='s2' title='STAT1 in Non-classical mono: log2FC 1.26, padj nan'>1.3</td><td class='s1' title='STAT1 in CD4 T: log2FC 0.76, padj nan'>0.8</td><td class='s1' title='STAT1 in CD8 T: log2FC 0.46, padj 0.67'>0.5</td><td class='na' title='not tested (filtered: low counts)'>–</td><td class='na' title='not tested (filtered: low counts)'>–</td></tr><tr><th scope='row'>IFI27</th><td class='s4 sig' title='IFI27 in Classical mono: log2FC 3.74, padj 7e-05'>3.7<span class="dot" aria-label="significant">●</span></td><td class='s4 sig' title='IFI27 in Non-classical mono: log2FC 5.20, padj 0.00059'>5.2<span class="dot" aria-label="significant">●</span></td><td class='s4' title='IFI27 in CD4 T: log2FC 3.40, padj nan'>3.4</td><td class='s4 sig' title='IFI27 in CD8 T: log2FC 3.66, padj 0.0039'>3.7<span class="dot" aria-label="significant">●</span></td><td class='na' title='not tested (filtered: low counts)'>–</td><td class='na' title='not tested (filtered: low counts)'>–</td></tr><tr><th scope='row'>RSAD2</th><td class='s3 sig' title='RSAD2 in Classical mono: log2FC 2.16, padj 0.0027'>2.2<span class="dot" aria-label="significant">●</span></td><td class='na' title='not tested (filtered: low counts)'>–</td><td class='na' title='not tested (filtered: low counts)'>–</td><td class='na' title='not tested (filtered: low counts)'>–</td><td class='na' title='not tested (filtered: low counts)'>–</td><td class='na' title='not tested (filtered: low counts)'>–</td></tr><tr><th scope='row'>SIGLEC1</th><td class='s3 sig' title='SIGLEC1 in Classical mono: log2FC 2.56, padj 0.0062'>2.6<span class="dot" aria-label="significant">●</span></td><td class='na' title='not tested (filtered: low counts)'>–</td><td class='na' title='not tested (filtered: low counts)'>–</td><td class='na' title='not tested (filtered: low counts)'>–</td><td class='na' title='not tested (filtered: low counts)'>–</td><td class='na' title='not tested (filtered: low counts)'>–</td></tr></tbody></table></div>
+<p>All 12 ISGs are up in SLE in every cell type where they were tested. Significance is concentrated in monocytes. In CD4 T cells IFI44L is up about 6-fold (log2 2.55) but not significant. A plausible cause is that the interferon signature is high in only some SLE patients, which inflates between-donor variance. <span class="tag g">Guess, not checked per donor</span></p>
+
+<h2>UCE clusters against the author labels</h2>
+<p>Each column shows how one label's cells spread across the 10 Louvain clusters built on the UCE embedding. Labels with fewer than 200 cells are omitted. Hover a cell for counts.</p>
+<div class="legend">
+<span><span class="sw" style="background:var(--s1)"></span>2–10%</span>
+<span><span class="sw" style="background:var(--s2)"></span>10–30%</span>
+<span><span class="sw" style="background:var(--s3)"></span>30–60%</span>
+<span><span class="sw" style="background:var(--s4)"></span>≥60%</span>
+</div>
+<div class="scroll"><table class='heat clus'><thead><tr><th>cluster · cells</th><th scope='col'>B cell<br><span class='muted'>n=2,046</span></th><th scope='col'>CD4 T<br><span class='muted'>n=7,137</span></th><th scope='col'>CD8 T<br><span class='muted'>n=3,184</span></th><th scope='col'>Classical mono<br><span class='muted'>n=4,569</span></th><th scope='col'>cDC<br><span class='muted'>n=270</span></th><th scope='col'>NK<br><span class='muted'>n=1,833</span></th><th scope='col'>Non-classical mono<br><span class='muted'>n=712</span></th></tr></thead><tbody><tr><th scope='row'>1<span class='muted'> · 3,420</span></th><td class='s0' title='cluster 1: 1 of 2,046 B cell cells'></td><td class='s3' title='cluster 1: 2,690 of 7,137 CD4 T cells'>38%</td><td class='s2' title='cluster 1: 728 of 3,184 CD8 T cells'>23%</td><td class='s0' title='cluster 1: 0 of 4,569 Classical mono cells'></td><td class='s0' title='cluster 1: 0 of 270 cDC cells'></td><td class='s0' title='cluster 1: 0 of 1,833 NK cells'></td><td class='s0' title='cluster 1: 0 of 712 Non-classical mono cells'></td></tr><tr><th scope='row'>2<span class='muted'> · 1,781</span></th><td class='s0' title='cluster 2: 0 of 2,046 B cell cells'></td><td class='s0' title='cluster 2: 48 of 7,137 CD4 T cells'></td><td class='s3' title='cluster 2: 1,664 of 3,184 CD8 T cells'>52%</td><td class='s0' title='cluster 2: 0 of 4,569 Classical mono cells'></td><td class='s0' title='cluster 2: 0 of 270 cDC cells'></td><td class='s0' title='cluster 2: 30 of 1,833 NK cells'></td><td class='s0' title='cluster 2: 0 of 712 Non-classical mono cells'></td></tr><tr><th scope='row'>3<span class='muted'> · 2,549</span></th><td class='s0' title='cluster 3: 0 of 2,046 B cell cells'></td><td class='s2' title='cluster 3: 2,050 of 7,137 CD4 T cells'>29%</td><td class='s2' title='cluster 3: 489 of 3,184 CD8 T cells'>15%</td><td class='s0' title='cluster 3: 0 of 4,569 Classical mono cells'></td><td class='s0' title='cluster 3: 0 of 270 cDC cells'></td><td class='s0' title='cluster 3: 8 of 1,833 NK cells'></td><td class='s0' title='cluster 3: 0 of 712 Non-classical mono cells'></td></tr><tr><th scope='row'>4<span class='muted'> · 3,364</span></th><td class='s0' title='cluster 4: 0 of 2,046 B cell cells'></td><td class='s0' title='cluster 4: 1 of 7,137 CD4 T cells'></td><td class='s0' title='cluster 4: 0 of 3,184 CD8 T cells'></td><td class='s4' title='cluster 4: 3,259 of 4,569 Classical mono cells'>71%</td><td class='s2' title='cluster 4: 78 of 270 cDC cells'>29%</td><td class='s0' title='cluster 4: 0 of 1,833 NK cells'></td><td class='s1' title='cluster 4: 25 of 712 Non-classical mono cells'>4%</td></tr><tr><th scope='row'>5<span class='muted'> · 2,599</span></th><td class='s0' title='cluster 5: 0 of 2,046 B cell cells'></td><td class='s3' title='cluster 5: 2,339 of 7,137 CD4 T cells'>33%</td><td class='s1' title='cluster 5: 216 of 3,184 CD8 T cells'>7%</td><td class='s0' title='cluster 5: 0 of 4,569 Classical mono cells'></td><td class='s0' title='cluster 5: 0 of 270 cDC cells'></td><td class='s0' title='cluster 5: 1 of 1,833 NK cells'></td><td class='s0' title='cluster 5: 0 of 712 Non-classical mono cells'></td></tr><tr><th scope='row'>6<span class='muted'> · 1,920</span></th><td class='s0' title='cluster 6: 0 of 2,046 B cell cells'></td><td class='s0' title='cluster 6: 4 of 7,137 CD4 T cells'></td><td class='s1' title='cluster 6: 87 of 3,184 CD8 T cells'>3%</td><td class='s0' title='cluster 6: 0 of 4,569 Classical mono cells'></td><td class='s0' title='cluster 6: 0 of 270 cDC cells'></td><td class='s4' title='cluster 6: 1,793 of 1,833 NK cells'>98%</td><td class='s0' title='cluster 6: 0 of 712 Non-classical mono cells'></td></tr><tr><th scope='row'>7<span class='muted'> · 1,268</span></th><td class='s0' title='cluster 7: 0 of 2,046 B cell cells'></td><td class='s0' title='cluster 7: 0 of 7,137 CD4 T cells'></td><td class='s0' title='cluster 7: 0 of 3,184 CD8 T cells'></td><td class='s2' title='cluster 7: 1,257 of 4,569 Classical mono cells'>28%</td><td class='s1' title='cluster 7: 7 of 270 cDC cells'>3%</td><td class='s0' title='cluster 7: 0 of 1,833 NK cells'></td><td class='s0' title='cluster 7: 4 of 712 Non-classical mono cells'></td></tr><tr><th scope='row'>8<span class='muted'> · 736</span></th><td class='s0' title='cluster 8: 0 of 2,046 B cell cells'></td><td class='s0' title='cluster 8: 1 of 7,137 CD4 T cells'></td><td class='s0' title='cluster 8: 0 of 3,184 CD8 T cells'></td><td class='s0' title='cluster 8: 51 of 4,569 Classical mono cells'></td><td class='s0' title='cluster 8: 0 of 270 cDC cells'></td><td class='s0' title='cluster 8: 1 of 1,833 NK cells'></td><td class='s4' title='cluster 8: 682 of 712 Non-classical mono cells'>96%</td></tr><tr><th scope='row'>9<span class='muted'> · 2,079</span></th><td class='s4' title='cluster 9: 2,045 of 2,046 B cell cells'>100%</td><td class='s0' title='cluster 9: 3 of 7,137 CD4 T cells'></td><td class='s0' title='cluster 9: 0 of 3,184 CD8 T cells'></td><td class='s0' title='cluster 9: 1 of 4,569 Classical mono cells'></td><td class='s0' title='cluster 9: 0 of 270 cDC cells'></td><td class='s0' title='cluster 9: 0 of 1,833 NK cells'></td><td class='s0' title='cluster 9: 1 of 712 Non-classical mono cells'></td></tr><tr><th scope='row'>10<span class='muted'> · 272</span></th><td class='s0' title='cluster 10: 0 of 2,046 B cell cells'></td><td class='s0' title='cluster 10: 1 of 7,137 CD4 T cells'></td><td class='s0' title='cluster 10: 0 of 3,184 CD8 T cells'></td><td class='s0' title='cluster 10: 1 of 4,569 Classical mono cells'></td><td class='s4' title='cluster 10: 185 of 270 cDC cells'>69%</td><td class='s0' title='cluster 10: 0 of 1,833 NK cells'></td><td class='s0' title='cluster 10: 0 of 712 Non-classical mono cells'></td></tr></tbody></table></div>
+<ul>
+<li><strong>The major lineages separate cleanly.</strong> B cells: 99.9% in cluster 9. NK: 98% in cluster 6. Non-classical monocytes: 96% in cluster 8. Classical monocytes: 99% in clusters 4 and 7. pDCs: all in cluster 10. <span class="tag k">Known</span></li>
+<li><strong>CD4 and CD8 T cells mix.</strong> Cluster 1 holds 2,690 CD4 and 728 CD8 cells, and only 52% of CD8 cells fall in the CD8 cluster (2). Naive CD4 and CD8 cells often sit together in embeddings, which would explain it. <span class="tag g">Guess, not checked with naive markers</span></li>
+<li><strong>Two splits are not yet explained:</strong> classical monocytes into clusters 4 and 7, and CD4 T into 1, 3 and 5. They could be subtypes, or they could be SLE vs healthy. That matters, because clusters that follow disease cannot serve as cell types for DE. The check (<code>scripts/cluster_check.R</code>) is written but not yet run.</li>
+</ul>
+
+<h2>Open finding: ribosomal genes down in SLE T and NK cells</h2>
+<p>In CD4 T cells, 35 of the 46 significant genes are ribosomal or mitochondrial, and all of them are down in SLE. FOS is down too. NK cells show 10 such genes. The same pattern appeared in the T/NK clusters of the PCA run, so it does not depend on the embedding.</p>
+<div class="callout">
+<p><strong>Leading explanation: a shift in which cells are present.</strong> The label “CD4-positive, alpha-beta T cell” includes both naive and memory cells, and naive T cells carry more ribosomal transcripts. If SLE patients have fewer naive CD4 T cells, the SLE pseudobulk shows less ribosomal RNA without any gene changing within a cell. <span class="tag i">Inferred</span></p>
+<p><strong>Test:</strong> if this is right, SLE cells will be under-represented in the CCR7/SELL-high CD4 cluster. <strong>Alternative:</strong> differences in sample handling, such as time to processing affecting FOS. These would not separate along naive markers.</p>
+</div>
+<p>Until this is resolved, ribosomal and FOS hits in T/NK cells should not be reported as disease biology.</p>
+
+<h2>Run time and full-dataset projections</h2>
+<div class="scroll"><table class="plain">
+<thead><tr><th>Scope</th><th>Cells</th><th>UCE time at 0.93 cells/s</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td>This test</td><td>19,988</td><td>6.0 h (measured)</td><td>Stages 0, 2 and 3 took about 7 minutes together</td></tr>
+<tr><td>A: cohort 4, female European American, all cells</td><td>~232,000 <span class="tag g">Guess</span></td><td>~2.9 days</td><td>Exact count from a dry run of <code>make_lupus_test.sh --all-donors</code></td></tr>
+<tr><td>B: all cells, all cohorts</td><td>1,263,676</td><td>~16 days</td><td>Needs each donor assigned to one cohort, plus a cohort term. Ancestry and sex confounding would force a restriction anyway. R memory at this size is untested.</td></tr>
+</tbody></table></div>
+<p>The projections assume time scales linearly with cell count. The time per batch held at about 8.6&nbsp;s across all 2,499 batches, which supports that. <span class="tag i">Inferred</span> Peak GPU memory was not logged for this run, but batch 8 fit within 8&nbsp;GB.</p>
+
+<h2>Recommendation</h2>
+<ol>
+<li><strong>Run <code>scripts/cluster_check.R</code></strong> on this run's output. It answers two things: whether UCE clusters follow disease, and whether the ribosomal signal comes from a shift in cell types.</li>
+<li><strong>Run option A in PCA mode with author labels.</strong> With <code>CELL_TYPE_COL</code> set, the DE uses the labels and the counts. The embedding affects only the cross-check clusters. As long as every cell is kept, as UCE did here, PCA mode gives the same DE in minutes instead of about 3 days. <span class="tag i">Inferred from code, not yet checked by running both</span></li>
+<li><strong>Keep UCE for cross-study work</strong>: combining datasets whose cell types are annotated differently or not at all. That is the purpose of the pipeline. A 3-day UCE run on cohort 4 is worth doing only to benchmark UCE itself.</li>
+</ol>
+
+<h2>Not verified</h2>
+<ul>
+<li>That Perez 2022 is absent from UCE's training data. If it was included, the model has seen these cells, which would flatter any claim about how well UCE handles new data. The DE is unaffected. <span class="tag g">Unchecked</span></li>
+<li>The cell count for option A, and R memory use at 1.26M cells.</li>
+<li>That PCA and UCE modes give identical DE when labels are used. This follows from the code but has not been run.</li>
+<li>A negative control: the same pipeline on healthy vs healthy donors, which should give about 0 DE genes. Not yet written.</li>
+<li>The number of tests: adjustment is within each cell type only. The six cell types shown ran 16,612 gene tests (B cells not counted), with no correction across cell types.</li>
+</ul>
+
+<footer>
+<p><strong>Provenance.</strong> Git commit <code>bc1cb88</code>, code hash <code>069733d5c9a7d75e</code>, clean tree. Preflight passed. Run log <code>run_diagnostic_20261029-160225.log</code>, started 2026-10-29T16:02:25-0500, finished 2026-10-29T22:09:15-0500. Hardware: Linux workstation with a Quadro P4000 (8&nbsp;GB, CUDA 12.2), 94&nbsp;GB RAM. Software: torch 2.1.1+cu121, UCE from <a href="https://github.com/snap-stanford/UCE">snap-stanford/UCE</a> (Rosen et al., bioRxiv 2023, doi:10.1101/2023.11.28.568918). DE values are computed directly from the per-cell-type DESeq2 output files. The cluster × label counts are transcribed from the Stage 2 log and checked against its label totals.</p>
+<p>Diagnostic run (<code>studies/lupus_test</code>), not a result for publication.</p>
+</footer>
+</main>
+</body>
+</html>
