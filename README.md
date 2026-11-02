@@ -10,6 +10,10 @@ counts with `study` as a batch covariate (DESeq2 `~ study + condition`).
 organs / illnesses later is a copy-one-folder operation that never touches or
 overwrites existing work.
 
+**Current work: SLE (lupus).** Plan, team notes, dataset registry and drug
+positive controls: [`planning/SLE_drug_discovery_plan.md`](planning/SLE_drug_discovery_plan.md).
+Reports: `docs/` (served by GitHub Pages if enabled).
+
 ## Folder layout
 
 ```

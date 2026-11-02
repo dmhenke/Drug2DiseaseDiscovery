@@ -204,6 +204,9 @@ footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--rule);
 <li><strong>Keep UCE for cross-study work</strong>: combining datasets whose cell types are annotated differently or not at all. That is the purpose of the pipeline. A 3-day UCE run on cohort 4 is worth doing only to benchmark UCE itself.</li>
 </ol>
 
+<h2>Drug matching (exploratory)</h2>
+<p>The pipeline has not tested any chemicals. As a first look, the monocyte, NK and CD4 T signatures were matched against LINCS L1000 compound signatures from cancer cell lines. Only the two monocyte signatures beat random gene sets, and their hits are driven by the interferon genes. <a href="drug-reversal.html">Open the interactive drug reversal lookup →</a></p>
+
 <h2>Not verified</h2>
 <ul>
 <li>That Perez 2022 is absent from UCE's training data. If it was included, the model has seen these cells, which would flatter any claim about how well UCE handles new data. The DE is unaffected. <span class="tag g">Unchecked</span></li>

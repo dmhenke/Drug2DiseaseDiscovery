@@ -1,0 +1,21 @@
+cell_type,rep,top1,median50
+Classical mono,0,0.0588,0.0588
+Classical mono,1,0.0833,0.0625
+Classical mono,2,0.12,0.08
+Classical mono,3,0.1277,0.0638
+Classical mono,4,0.093,0.0465
+Non-classical mono,0,0.1667,0.125
+Non-classical mono,1,0.1429,0.0714
+Non-classical mono,2,0.2,0.12
+Non-classical mono,3,0.1818,0.0909
+Non-classical mono,4,0.1154,0.0769
+NK,0,0.1429,0.0952
+NK,1,0.1739,0.1304
+NK,2,0.2609,0.1304
+NK,3,0.1667,0.125
+NK,4,0.1905,0.1429
+CD4 T,0,0.3333,0.2222
+CD4 T,1,0.25,0.25
+CD4 T,2,0.3,0.2
+CD4 T,3,0.3636,0.2727
+CD4 T,4,0.3333,0.2222
