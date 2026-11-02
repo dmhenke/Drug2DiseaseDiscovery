@@ -1,0 +1,7 @@
+cell_type	genes_shared	spearman_lfc	sc_sig	sc_sig_on_bulk_array	replicated	not_on_array
+CD4-positive,_alpha-beta_T_cell	39	0.43	46	9	8	RPL35A;RPL3;RPS27;RPL31;RPS6;B2M;FTL;RPS15A;RPS27A;RPL32;RPS28;LTB
+CD8-positive,_alpha-beta_T_cell	608	0.08	2	1	1	IFI44L
+classical_monocyte	937	0.25	68	20	17	GBP1;PARP9;EPSTI1;IFI6;PLAC8;IFIT3;IFI44L;IFI44;SAMD9L;XAF1;NEXN;RSAD2
+conventional_dendritic_cell	193	0.04	0	0	0	
+natural_killer_cell	157	0.09	38	12	4	FCER1G;RPS27;CXCR4;SEM1;RPS6;RPS27L;RPS15A;RPL23A;S100A11;ACTR3;RPL3;HNRNPA1
+non-classical_monocyte	152	0.36	35	12	10	IFI6;TNFSF10;RPL4;B2M;RPS27L;OAS1;PSMA4;RPL3;IFI16;PSMB9;MS4A4A;NOP10
