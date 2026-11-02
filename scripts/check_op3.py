@@ -15,9 +15,12 @@ from pathlib import Path
 
 import anndata as ad
 import numpy as np
-from rdkit import Chem, RDLogger
 
-RDLogger.DisableLog("rdApp.*")
+try:
+    from rdkit import Chem, RDLogger
+    RDLogger.DisableLog("rdApp.*")
+except ImportError:  # record it, never skip silently; the other checks are independent
+    Chem = None
 d = Path(sys.argv[1] if len(sys.argv) > 1 else "shared/perturbation/op3")
 fails = []
 
@@ -36,8 +39,11 @@ for f in ["de_train.h5ad", "de_test.h5ad"]:
     check("genes", a.n_vars > 4000, f"{a.n_vars} genes x {a.n_obs} (compound, cell type) rows")
     print("       cell types:", ", ".join(map(str, obs.cell_type.unique())))
     sm = obs.drop_duplicates("sm_name")[["sm_name", "SMILES"]]
-    bad = [n for n, s in zip(sm.sm_name, sm.SMILES) if Chem.MolFromSmiles(str(s)) is None]
-    check("every SMILES parses", not bad, f"{len(sm)} compounds" + (f"; bad: {bad[:5]}" if bad else ""))
+    if Chem is None:
+        check("every SMILES parses", False, f"{len(sm)} compounds NOT CHECKED: no rdkit (pip install rdkit)")
+    else:
+        bad = [n for n, s in zip(sm.sm_name, sm.SMILES) if Chem.MolFromSmiles(str(s)) is None]
+        check("every SMILES parses", not bad, f"{len(sm)} compounds" + (f"; bad: {bad[:5]}" if bad else ""))
 
 a = ad.read_h5ad(d / "de_train.h5ad")
 names = set(a.obs.sm_name.astype(str))
