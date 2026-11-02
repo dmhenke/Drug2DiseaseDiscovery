@@ -42,6 +42,7 @@ Two consequences for the team's questions (**Inferred**):
 | Second SLE study, cross-study design | Not started. Nehar-Belaid 2020 (GSE135779) is the top candidate | — |
 | Bulk whole-blood meta-analysis (4 GEO microarray studies, limma), from the team's `sle_analysis` repo | Imported. Reviewed: the gene-intersection bug drops most interferon genes. Concordance with scRNA computed | `analysis/sle_bulk_meta/` |
 | Chemical database and perturbation model design | ChEMBL chosen; seed table of 129 compounds built; chemCPA-style model on OP3 proposed | `planning/chemical_perturbation_model.md`, `shared/compounds/seed_compounds.tsv` |
+| OP3 training data and molecule embeddings | OP3 chosen and characterised; fingerprint script passes its check; pilot and full run sketched | `planning/op3_pilot.md`, `scripts/fetch_op3.sh`, `scripts/mol_fingerprints.py` |
 | TranSiGen | Not started (bulk L1000 model; the single-cell design above is chemCPA-style instead) | — |
 
 ## Notes → actions

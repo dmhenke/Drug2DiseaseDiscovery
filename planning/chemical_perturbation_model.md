@@ -80,19 +80,18 @@ x̂_treated = decoder(z_treated)        (negative-binomial expression for every 
 
    | Dataset | Cells | Compounds | Fit for SLE |
    |---|---|---|---|
-   | **OP3** (GSE279945) | PBMC from healthy donors: T, B, NK, myeloid (**Known**) | 146 (**Known**) | Best available. Same tissue type as our SLE data |
+   | **OP3** (GSE279945) | 301,785 cells; PBMC from 3 healthy donors: T, B, NK, myeloid (**Known**) | 146 at 1 µM, 24 h; SMILES included (**Known**) | **Chosen.** Same tissue type as our SLE data. See [`op3_pilot.md`](op3_pilot.md) |
    | Tahoe-100M | ~100M cells, 50 cancer cell lines (**Known**, secondary sources) | ~1,100 (**Known**) | Cancer lines; too big for the node |
    | sciPlex3 | 3 cancer lines (**Guess**, from memory) | 188 (**Guess**) | chemCPA's benchmark; useful for checking our implementation |
    | LINCS L1000 | Bulk, ~978 measured genes, mostly epithelial lines | ~30k | Pretraining only (as chemCPA does) |
    | Kang 2018 (GSE96583) | Lupus PBMC ± IFN-β | 1 cytokine | Teaches the interferon axis |
 
-3. **The interferon axis may be invisible in the training data.** OP3 PBMCs are
-   cultured from healthy donors without interferon stimulation, so interferon
-   genes are low at baseline. A JAK inhibitor then has little to suppress, and
-   the model can't learn "JAK inhibitor → interferon genes down". Yet that is the
-   main SLE axis (**Inferred**).
-   - Mitigation: add IFN-stimulated PBMC data (Kang 2018) so the model sees the axis.
-   - Check whether OP3 includes any JAK/TYK2 inhibitor or glucocorticoid. Its compound list hasn't been checked (**Guess** that it does).
+3. **The interferon axis is weak in the training data, but not absent.** OP3 PBMCs
+   are cultured from healthy donors without interferon stimulation, so interferon
+   genes are low at baseline and a JAK inhibitor has little to suppress
+   (**Inferred**). But **OP3 does contain ruxolitinib, prednisolone and mometasone**
+   (**Known**, checked 2026-11-02), so the axis is represented.
+   - Mitigation if the effect proves too small: add IFN-stimulated PBMC data (Kang 2018).
 4. **Generalizing to unseen compounds is the weak point.** chemCPA's main claim is
    better performance on unseen drugs, helped by bulk pretraining (**Known**,
    abstract). Arc's State model is described as "the first model to consistently
@@ -109,17 +108,17 @@ x̂_treated = decoder(z_treated)        (negative-binomial expression for every 
 | Stage | Input → output | Check that can fail on its own |
 |---|---|---|
 | C0 Compound table | Names/IDs → `shared/compounds/*.tsv` with SMILES, InChIKey, ChEMBL ID, phase; RDKit-standardized | Every row parses; InChIKey round-trips; no duplicate InChIKey with conflicting annotation. **Seed done.** |
-| C1 Molecule embedding | SMILES → fingerprints (`.npy`, keyed by InChIKey) | Tanimoto similarity of known analogue pairs > unrelated pairs (e.g. prednisolone vs methylprednisolone > prednisolone vs methotrexate). **Passed on the seed table** (Morgan r=2, 2048-bit): prednisolone–methylprednisolone 0.70, baricitinib–ruxolitinib 0.48, prednisolone–dexamethasone 0.42, against 0.09 (prednisolone–methotrexate) and 0.12 (baricitinib–hydroxychloroquine) |
-| C2 Training data | OP3 (+ Kang 2018) → h5ad with `compound_inchikey`, `dose`, `donor`, `cell_type`, raw counts | Each compound's DMSO-normalized response in OP3 recovers known biology (glucocorticoids induce TSC22D3/FKBP5 in myeloid cells) |
+| C1 Molecule embedding | SMILES → fingerprints (`.npy`, keyed by InChIKey). **Done:** `scripts/mol_fingerprints.py` | Tanimoto similarity of known analogue pairs > unrelated pairs (e.g. prednisolone vs methylprednisolone > prednisolone vs methotrexate). **Passed on the seed table** (Morgan r=2, 2048-bit): prednisolone–methylprednisolone 0.70, baricitinib–ruxolitinib 0.48, prednisolone–dexamethasone 0.42, against 0.09 (prednisolone–methotrexate) and 0.12 (baricitinib–hydroxychloroquine) |
+| C2 Training data | OP3 benchmark build (1.1 GB, not the 14.2 GB GEO file) | `scripts/check_op3.py`: SMILES all parse, controls present, prednisolone induces TSC22D3/FKBP5 in myeloid cells |
 | C3 Model | chemCPA, trained with whole compounds held out | Beats the linear and nearest-compound baselines on held-out compounds |
 | C4 In-silico treatment | SLE monocytes × compound → generated cells | Positive controls rank above the random-compound null on reversal score |
 | C5 Report | Scores → `docs/` page, extending the drug lookup | — |
 
 ## Open decisions
 
-1. Accept OP3 as the training set? It's the only immune-cell, multi-compound single-cell set we've found.
-2. Molecule encoder: start with Morgan fingerprints (no extra model, RDKit already installed) before trying pretrained encoders.
-3. Run on the node, or on a larger GPU for Tahoe-scale pretraining?
+1. ~~Accept OP3 as the training set?~~ **Decided 2026-11-02: yes.**
+2. ~~Molecule encoder?~~ **Decided: Morgan fingerprints first, pretrained encoders in Stage F.**
+3. Run on the node, or on a larger GPU for Tahoe-scale pretraining? Still open.
 
 ## Sources
 
