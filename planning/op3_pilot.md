@@ -26,7 +26,9 @@ From Szalata et al., NeurIPS 2024 D&B, and the OP3 data files (**Known** unless 
 1. **The interferon/steroid axis is present after all.** The 76-compound test split alone contains **Ruxolitinib** (JAK1/2) and **Prednisolone**, plus Mometasone Furoate. Both ruxolitinib and prednisolone are in our positive-control list. The earlier worry that OP3 could not teach "JAK inhibitor → interferon genes down" was too pessimistic, though cultured healthy PBMCs still have low baseline interferon, so the effect may be small (**Inferred**).
 2. **The 14.2 GB GEO file is not the right download.** The Open Problems benchmark build is the same experiment, QC'd and pseudobulked, at **1.1 GB in single-cell form** and **292 MB** for the DE tables alone (**Known**, from file sizes).
 
-**Already confirmed overlap with our own work:** 5 of our 129 seed compounds appear in the OP3 test split — prednisolone, ruxolitinib, vorinostat, IMD-0354, TPCA-1 — and three of those (vorinostat, IMD-0354, TPCA-1) came out of the L1000 monocyte reversal independently. The full 140-compound list will add more; it needs `de_train.h5ad`.
+**Confirmed overlap with our own work (Known, matched on InChIKey connectivity, 2026-11-04):** 15 of the 140 OP3 compounds are in our seed table: BMS-387032, CHIR-99021, crizotinib, dactolisib, IMD-0354, LDN 193189, methotrexate, penfluridol, prednisolone, ruxolitinib, C646 (STK219801), TL_HRAS26, TPCA-1, tivantinib, vorinostat.
+
+**Content check on the node, 2026-11-04 (commit 8790252): PASS.** 553 rows: T 140, NK 139, B 139, Myeloid 135 compounds. In all 16 steroid rows (prednisolone and mometasone, 4 cell types, 2 genes) TSC22D3 and FKBP5 are up, logFC 2.3 to 5.0, so the DE sign is as expected.
 
 ## Stage P — pilot: fingerprints → pseudobulk response
 
@@ -36,11 +38,18 @@ transcriptional effect well enough to be worth building on?
 **Data:** `de_train.h5ad` / `de_test.h5ad` (292 MB). These are limma DE statistics per
 (compound, cell type) against DMSO, 5,317 genes. No single cells, no GPU.
 
-**Model:** ridge regression, fingerprint (2048) + cell type (one-hot) → 5,317 DE values.
-One `sklearn` call. This is deliberately the dumbest thing that uses structure.
+**Model:** cell-type mean + ridge on the fingerprint (2048) → 5,317 DE values. The cell-type term is
+unpenalised, so strong regularisation falls back to the cell-type mean. Alpha is chosen by inner
+compound-grouped CV. This is deliberately the dumbest thing that uses structure.
 
-**Splits:** hold out **whole compounds**, never rows. OP3's own split also holds out
-whole cell types (B and Myeloid), which is the harder benchmark task; report both.
+**Splits, corrected 2026-11-04 from the real data:** OP3's official split does **not** hold out
+chemistry. All 76 test compounds have T and NK rows in train, so it measures transfer between cell
+types. The verdict therefore uses our own **5-fold whole-compound holdout** over all 553 rows (**primary**);
+the official split is reported alongside with an added `same_compound` baseline, which should be hard to beat.
+
+**Target (fixed before running):** `logFC`, because p-based values scale with the cells per cell type
+(prednisolone's TSC22D3 logFC is 2.35 in myeloid and 2.97 in T, but its signed log10 p is 39 and 83).
+`clipped_sign_log10_pval`, the published benchmark's target, is run as a secondary.
 
 **Baselines it must beat.** Without these the result is meaningless:
 
@@ -53,12 +62,15 @@ whole cell types (B and Myeloid), which is the harder benchmark task; report bot
 
 **Pass criteria, fixed before running:**
 
-1. The ridge model beats the global and cell-type means on held-out compounds, by mean correlation across compounds.
+"Beats" means the 95 % bootstrap CI of the paired difference, resampling compounds, is above zero.
+
+1. The ridge model beats the global mean, the cell-type mean and the permuted null on held-out compounds, by mean correlation across compounds.
 2. It beats the nearest-training-compound baseline. *(If it does not, say so and use the nearest-neighbour method; it is simpler and would be the honest answer.)*
-3. **Biology check:** for held-out prednisolone in myeloid cells, predicted TSC22D3 and FKBP5 are up. These are canonical glucocorticoid targets, so a model that misses them has not learned the strongest signal in the data.
+3. **Biology check:** with all prednisolone rows removed from training, predicted TSC22D3 and FKBP5 in myeloid cells are up **and above the cell-type mean**. Mometasone stays in training (Tanimoto 0.29, prednisolone's nearest neighbour), so this tests transfer from one steroid to another. A run with no glucocorticoid in training is also reported, for information.
 4. **Bootstrap CIs** over held-out compounds, not point estimates.
 
-**Cost:** about 30 min of compute on the Mac (**Guess**; ridge on 560×2048 is seconds, the h5ad reads dominate).
+**Run:** `scripts/op3_report.sh` on the node runs the checks, then this pilot, and packs the results.
+Tested on synthetic values only: planted signal is recovered, pure noise falls back to the cell-type mean.
 
 ## Stage F — full run
 
@@ -90,7 +102,7 @@ OP3 alone. Either fix dose, or fit it from L1000/sciPlex, which are multi-dose
 
 1. **Compound-specific signal may be weak.** OP3 itself reports that many compounds give subtle effects and that DE is sensitive to low-count genes. Stage P criterion 1 is exactly this test, which is why it comes first.
 2. **Nearest-neighbour may win.** Common in this field. It would be a real result and should be reported, not buried.
-3. **Cross-cell-type generalization is the published hard task.** Expect worse numbers on OP3's own split than on a plain compound holdout.
+3. **Chemistry is sparse (Known, from `compounds.tsv`).** Median nearest-neighbour Tanimoto among the 140 compounds is 0.26; only 11 % reach 0.4. Ruxolitinib's nearest neighbour is crizotinib at 0.18, and filgotinib (GLPG0634) is not close to it despite sharing a target. Fingerprints may not connect compounds that act alike. Expect higher numbers on OP3's own split than on the whole-compound holdout, because the compound is already seen in other cell types.
 4. **Healthy PBMC → SLE monocyte transfer is unvalidated** and probably cannot be validated without treated SLE cells.
 5. **Three donors** means donor effects cannot be separated from compound effects well. Keep donor as a covariate and never as a split.
 
@@ -98,8 +110,7 @@ OP3 alone. Either fix dose, or fit it from L1000/sciPlex, which are multi-dose
 
 ```bash
 scripts/fetch_op3.sh                         # ~1.1 GB, resumable, size-checked
-python scripts/check_op3.py shared/perturbation/op3
-python scripts/mol_fingerprints.py --self-check
+scripts/op3_report.sh                        # checks, Stage P, one tarball in ~/
 ```
 
 `scripts/mol_fingerprints.py` already passes its analogue check (prednisolone–methyl­prednisolone
@@ -107,8 +118,7 @@ python scripts/mol_fingerprints.py --self-check
 been run on the 129-compound seed table: 2048-bit vectors, InChIKeys round-tripping 100 %
 against PubChem's (**Known**).
 
-Not yet written: the Stage P training script. It needs the downloaded files first,
-so that the splits and baselines are written against the real columns.
+The Stage P script is `scripts/op3_ridge.py`, with a self-test in `scripts/test_op3_ridge.py`.
 
 ## Sources
 

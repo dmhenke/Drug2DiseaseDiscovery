@@ -24,6 +24,7 @@ studies/*/interim/**
 studies/*/results/**
 shared/models/**
 shared/references/**
+shared/perturbation/**
 !.gitkeep
 pipeline/UCE/
 !studies/*/interim/uce/
