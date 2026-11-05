@@ -1,0 +1,22 @@
+== de_train.h5ad
+  [ok] expected obs columns: sm_cell_type, cell_type, sm_name, sm_lincs_id, SMILES, split, control
+  [ok] genes: 5317 genes x 402 (compound, cell type) rows
+       cell types: NK cells, T cells, B cells, Myeloid cells
+       X: absent; layers: AveExpr, B, P.Value, adj.P.Value, clipped_sign_log10_pval, is_de, is_de_adj, logFC, sign_log10_adj_pval, sign_log10_pval, t
+  [ok] every SMILES parses: 140 compounds
+== de_test.h5ad
+  [ok] expected obs columns: sm_cell_type, cell_type, sm_name, sm_lincs_id, SMILES, split, control
+  [ok] genes: 5317 genes x 151 (compound, cell type) rows
+       cell types: B cells, Myeloid cells
+       X: absent; layers: AveExpr, B, P.Value, adj.P.Value, clipped_sign_log10_pval, is_de, is_de_adj, logFC, sign_log10_adj_pval, sign_log10_pval, t
+  [ok] every SMILES parses: 76 compounds
+  [ok] positive control present: Belinostat
+  [ok] positive control present: Dabrafenib
+  [ok] DMSO is the reference, not a row: 140 compounds across both splits
+  interferon/steroid axis compounds: Methotrexate, Mometasone Furoate, Prednisolone, Ruxolitinib
+  [ok] a JAK inhibitor is present
+  [ok] a glucocorticoid is present
+  76 of 76 test compounds also have train rows (not unseen chemistry)
+  [ok] prednisolone induces TSC22D3/FKBP5 in myeloid: TSC22D3 logFC=2.35 (test); FKBP5 logFC=2.38 (test)
+
+OP3 CHECK: PASS

@@ -1,0 +1,59 @@
+STAGE P run on /home/qrtz/data2/user/david/projects/Drug2DiseaseDiscovery/shared/perturbation/op3: 553 rows, 140 compounds, 5317 genes, layer clipped_sign_log10_pval
+commit 20a5847; 2 changed files; host qrtz-Precision-7820-Tower; seed 0; NaN values set to 0: 0
+folds 5, permutations 20, bootstraps 2000, alphas [1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0]
+
+    evaluation  metric                   comparison  estimate  ci_lo  ci_hi  n_compounds
+      official       r                  global_mean     0.220  0.181  0.255         76.0
+      official       r      ridge_minus_global_mean     0.105  0.091  0.121         76.0
+      official       r               cell_type_mean     0.297  0.257  0.340         76.0
+      official       r   ridge_minus_cell_type_mean     0.028  0.020  0.038         76.0
+      official       r                        ridge     0.325  0.282  0.371         76.0
+      official       r             nearest_compound     0.179  0.135  0.227         76.0
+      official       r ridge_minus_nearest_compound     0.146  0.110  0.186         76.0
+      official       r                     permuted     0.318  0.276  0.357         76.0
+      official       r         ridge_minus_permuted     0.008  0.003  0.012         76.0
+      official       r                same_compound     0.260  0.229  0.291         76.0
+      official       r    ridge_minus_same_compound     0.066  0.034  0.096         76.0
+      official r_resid                  global_mean     0.148  0.097  0.199         76.0
+      official r_resid      ridge_minus_global_mean     0.051 -0.018  0.125         76.0
+      official r_resid               cell_type_mean       NaN    NaN    NaN          NaN
+      official r_resid                        ridge     0.199  0.163  0.235         76.0
+      official r_resid             nearest_compound     0.111  0.067  0.157         76.0
+      official r_resid ridge_minus_nearest_compound     0.088  0.043  0.132         76.0
+      official r_resid                     permuted     0.168  0.144  0.195         76.0
+      official r_resid         ridge_minus_permuted     0.031  0.007  0.053         76.0
+      official r_resid                same_compound     0.319  0.292  0.345         76.0
+      official r_resid    ridge_minus_same_compound    -0.120 -0.154 -0.082         76.0
+whole_compound       r                  global_mean     0.230  0.201  0.259        140.0
+whole_compound       r      ridge_minus_global_mean     0.077  0.071  0.083        140.0
+whole_compound       r               cell_type_mean     0.304  0.276  0.334        140.0
+whole_compound       r   ridge_minus_cell_type_mean     0.004 -0.001  0.009        140.0
+whole_compound       r                        ridge     0.308  0.277  0.337        140.0
+whole_compound       r             nearest_compound     0.179  0.150  0.209        140.0
+whole_compound       r ridge_minus_nearest_compound     0.128  0.103  0.152        140.0
+whole_compound       r                     permuted     0.298  0.270  0.326        140.0
+whole_compound       r         ridge_minus_permuted     0.009  0.005  0.014        140.0
+whole_compound       r                same_compound       NaN    NaN    NaN          NaN
+whole_compound r_resid                  global_mean     0.058  0.037  0.080        140.0
+whole_compound r_resid      ridge_minus_global_mean     0.000 -0.038  0.038        140.0
+whole_compound r_resid               cell_type_mean       NaN    NaN    NaN          NaN
+whole_compound r_resid                        ridge     0.058  0.032  0.084        140.0
+whole_compound r_resid             nearest_compound     0.106  0.076  0.134        140.0
+whole_compound r_resid ridge_minus_nearest_compound    -0.047 -0.074 -0.023        140.0
+whole_compound r_resid                     permuted     0.000 -0.005  0.006        140.0
+whole_compound r_resid         ridge_minus_permuted     0.058  0.032  0.085        140.0
+whole_compound r_resid                same_compound       NaN    NaN    NaN          NaN
+
+              training    gene  measured  ridge  cell_type_mean  nearest_compound       nearest_name  tanimoto
+mometasone_in_training TSC22D3       4.0   0.25            0.17              4.00 Mometasone Furoate      0.29
+mometasone_in_training   FKBP5       4.0  -0.81           -1.17              4.00 Mometasone Furoate      0.29
+     no_glucocorticoid TSC22D3       4.0   0.02            0.14             -0.84        Doxorubicin      0.17
+     no_glucocorticoid   FKBP5       4.0  -1.07           -1.20              1.04        Doxorubicin      0.17
+
+alphas chosen: [1000.0]
+
+  [FAIL] 1 beats global mean, cell-type mean and permuted
+  [ok] 2 beats nearest training compound
+  [FAIL] 3 unseen prednisolone: TSC22D3 and FKBP5 predicted up, above the cell-type mean
+Criteria use whole_compound, metric r; CIs over compounds, unadjusted, all 5 comparisons must clear zero.
+STAGE P (clipped_sign_log10_pval): FAIL -> go to the pilot's fail branch

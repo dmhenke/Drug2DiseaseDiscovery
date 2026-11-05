@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OP3 Stage P</title>
+<meta name="description" content="Pilot test of whether a compound's chemical structure predicts its transcriptional effect on PBMCs, on the Open Problems OP3 perturbation dataset.">
+<style>
+/* Shared styling for the report pages. Palette and type scale follow docs/lupus-uce-test.html. */
+:root {
+  --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --ink-3: #74736e;
+  --rule: #e4e3de; --chip: #f0efec;
+  --known: #1c5cab; --inferred: #6250d6; --guess: #8a5a00;
+  --pass: #1a6b3c; --fail: #a32020; --bar: #5598e7; --bar-2: #eb6834;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --ink-3: #9a998f;
+    --rule: #2e2e2b; --chip: #262624;
+    --known: #86b6ef; --inferred: #9085e9; --guess: #eda100;
+    --pass: #5cc98a; --fail: #f08a8a; --bar: #3987e5; --bar-2: #d95926;
+  }
+}
+:root[data-theme="dark"] {
+  --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --ink-3: #9a998f;
+  --rule: #2e2e2b; --chip: #262624;
+  --known: #86b6ef; --inferred: #9085e9; --guess: #eda100;
+  --pass: #5cc98a; --fail: #f08a8a; --bar: #3987e5; --bar-2: #d95926;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink);
+  font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 920px; margin: 0 auto; padding: 32px 16px 64px; }
+h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 6px; letter-spacing: -0.01em; }
+h2 { font-size: 1.25rem; margin: 48px 0 12px; padding-top: 16px; border-top: 1px solid var(--rule); }
+h3 { font-size: 1rem; margin: 24px 0 8px; }
+p, li { color: var(--ink); max-width: 72ch; }
+.sub { color: var(--ink-2); margin: 0 0 24px; }
+.muted { color: var(--ink-3); }
+a { color: var(--known); }
+code { font: 0.88em ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--chip); padding: 1px 5px; border-radius: 4px; }
+.summary { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 18px 22px; }
+.summary ul { margin: 0; padding-left: 20px; }
+.summary li + li { margin-top: 8px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 20px 0 0; }
+.tile { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 14px 16px; }
+.tile b { display: block; font-size: 1.7rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.tile span { color: var(--ink-2); font-size: 0.88rem; }
+.tag { display: inline-block; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase;
+  border: 1px solid currentColor; border-radius: 4px; padding: 0 5px; margin-left: 4px; vertical-align: 1px; }
+.tag.k { color: var(--known); } .tag.i { color: var(--inferred); } .tag.g { color: var(--guess); }
+.scroll { overflow-x: auto; margin: 12px 0; -webkit-overflow-scrolling: touch; }
+table { border-collapse: collapse; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+.plain { width: 100%; }
+.plain th, .plain td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+.plain thead th { color: var(--ink-2); font-weight: 600; font-size: 0.82rem; border-bottom: 1px solid var(--ink-3); }
+.plain td.num, .plain th.num { text-align: right; white-space: nowrap; }
+.pass { color: var(--pass); font-weight: 600; }
+.fail { color: var(--fail); font-weight: 600; }
+figure { margin: 16px 0; }
+figcaption { color: var(--ink-2); font-size: 0.85rem; margin-top: 8px; max-width: 72ch; }
+svg { max-width: 100%; height: auto; display: block; }
+.note { background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--guess);
+  border-radius: 6px; padding: 12px 16px; margin: 16px 0; }
+.note p { margin: 0; } .note p + p { margin-top: 8px; }
+footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--rule); color: var(--ink-3); font-size: 0.85rem; }
+</style>
+</head>
+<body data-palette="#2a78d6,#eb6834">
+<main>
+<h1>Can a drug's structure predict its effect?</h1>
+<p class="sub">Stage P pilot on OP3, 140 compounds in human PBMCs &middot; run Wed Nov  4 04:35:05 PM CST 2026 on qrtz-Precision-7820-Tower &middot;
+commit <code>20a5847</code></p>
+
+<div class="summary">
+<p><b>No, not from a fingerprint.</b> A ridge model on 2048-bit Morgan fingerprints does not predict a
+held-out compound's effect any better than simply using the average effect across all compounds in that
+cell type: a difference of 0.001 <span class='muted'>(&minus;0.002 to 0.005)</span>
+in correlation. <b>Stage P fails</b>, on both target measures.</p>
+<p>The data is not at fault. A compound's measured effect in T and NK cells predicts its own effect in B and
+myeloid cells far better than the model does (0.269 against 0.189), so
+response predicts response. What fails is the link from <i>structure</i> to response.</p>
+<p>Looking up the most chemically similar compound OP3 already measured beats the model on compound-specific
+signal, by 0.047 <span class='muted'>(0.018 to 0.077)</span>. The baseline
+built to be beaten is the method that works.</p>
+</div>
+
+<div class="tiles">
+<div class="tile"><b>140</b><span>compounds, 4 cell types, 553 measured profiles</span></div>
+<div class="tile"><b>0.26</b><span>median similarity to the nearest other compound</span></div>
+<div class="tile"><b>16</b><span>compounds within 0.4 of another <span class="muted">(11&thinsp;%)</span></span></div>
+<div class="tile"><b>15</b><span>also in our own compound list</span></div>
+</div>
+
+<h2>What was asked, and what came back</h2>
+<p>The question was whether structure predicts response well enough to build on. The criteria below were
+fixed in writing before the run, so they could fail. <span class="muted">Target: logFC.
+Held out whole compounds, 5-fold, so a test compound appears in no cell type during training.
+&ldquo;Beats&rdquo; means the 95&thinsp;% interval of the paired difference, resampling compounds, excludes zero.</span></p>
+
+<div class="scroll"><table class="plain">
+<thead><tr><th>Criterion</th><th class="num">Difference in correlation</th><th>Result</th></tr></thead>
+<tbody><tr><td>Beats the global mean</td><td class='num'>0.071 <span class='muted'>(0.064 to 0.077)</span></td><td class='pass'>pass</td></tr><tr><td>Beats the cell-type mean</td><td class='num'>0.001 <span class='muted'>(&minus;0.002 to 0.005)</span></td><td class='fail'>FAIL</td></tr><tr><td>Beats the permuted null</td><td class='num'>0.005 <span class='muted'>(0.001 to 0.008)</span></td><td class='pass'>pass</td></tr><tr><td>Beats the nearest training compound</td><td class='num'>0.144 <span class='muted'>(0.116 to 0.172)</span></td><td class='pass'>pass</td></tr><tr><td>Unseen prednisolone in myeloid cells induces TSC22D3 and FKBP5, above the cell-type mean</td><td class='num'>TSC22D3 0.21, FKBP5 &minus;0.04<br><span class='muted'>measured 2.35 and 2.38</span></td><td class='fail'>FAIL</td></tr></tbody>
+</table></div>
+
+<div class="note">
+<p><b>The one criterion that passed was badly specified, and I wrote it. <span class="tag k">known</span></b>
+Ridge chose heavy regularisation (alpha 1000.0, 10000.0) and so sits almost exactly on the cell-type mean. Raw
+correlation rewards that, which means the cell-type mean on its own would also have &ldquo;beaten&rdquo; the
+nearest-compound baseline. It is not evidence that the model learned any chemistry.</p>
+<p>The criterion is left as written rather than quietly rewritten. The column below that it should have used
+is the second one.</p>
+</div>
+
+<h2>Raw correlation hides the thing we care about</h2>
+<p>Most of any correlation here comes from the cell type, not the compound: all compounds in myeloid cells
+look broadly alike. Removing the cell-type mean first leaves only the compound-specific part, which is what a
+drug-discovery claim rests on.</p>
+
+<div class="scroll"><table class="plain">
+<thead><tr><th>Method</th><th class="num">Correlation</th><th class="num">After removing the cell-type mean</th></tr></thead>
+<tbody><tr><td>Ridge on the fingerprint</td><td class='num'>0.336 <span class='muted'>(0.302 to 0.370)</span></td><td class='num'>0.048 <span class='muted'>(0.019 to 0.074)</span></td></tr><tr><td>Nearest training compound</td><td class='num'>0.192 <span class='muted'>(0.160 to 0.225)</span></td><td class='num'>0.095 <span class='muted'>(0.064 to 0.126)</span></td></tr><tr><td>Cell-type mean</td><td class='num'>0.335 <span class='muted'>(0.302 to 0.370)</span></td><td class='num'>not defined</td></tr><tr><td>Permuted null</td><td class='num'>0.332 <span class='muted'>(0.297 to 0.366)</span></td><td class='num'>0.000 <span class='muted'>(&minus;0.006 to 0.007)</span></td></tr></tbody>
+</table></div>
+<p class="muted">The cell-type mean has no compound-specific part by construction, and the permuted null keeps
+every structure but shuffles which compound it belongs to.</p>
+
+<h2>Chemical similarity is what carries the signal <span class="tag g">exploratory</span></h2>
+<p>This split was chosen after seeing the results, so treat it as a lead rather than a test. Binned by how
+close each compound is to its nearest training neighbour, compound-specific signal appears only when
+something chemically similar was already measured &mdash; for both methods.</p>
+
+<figure>
+<p class="muted" style="margin:0 0 4px"><span style='color:var(--ink-2)'><span style='display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--bar);vertical-align:-1px;margin-right:5px'></span>Ridge on the fingerprint</span> <span style='color:var(--ink-2)'><span style='display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--bar-2);vertical-align:-1px;margin-right:5px'></span>Nearest training compound</span></p>
+<svg viewBox="0 0 640 274" role="img" aria-labelledby="simchart-t">
+<title id="simchart-t">Compound-specific signal by chemical similarity, with 95 % intervals</title>
+<line x1="204.7" y1="24" x2="204.7" y2="236" stroke="var(--rule)" stroke-width="1"/>
+<text x="204.7" y="252" text-anchor="middle" font-size="11" fill="var(--ink-3)">0.00</text>
+<line x1="321.8" y1="24" x2="321.8" y2="236" stroke="var(--rule)" stroke-width="1"/>
+<text x="321.8" y="252" text-anchor="middle" font-size="11" fill="var(--ink-3)">0.09</text>
+<line x1="438.9" y1="24" x2="438.9" y2="236" stroke="var(--rule)" stroke-width="1"/>
+<text x="438.9" y="252" text-anchor="middle" font-size="11" fill="var(--ink-3)">0.17</text>
+<line x1="555.9" y1="24" x2="555.9" y2="236" stroke="var(--rule)" stroke-width="1"/>
+<text x="555.9" y="252" text-anchor="middle" font-size="11" fill="var(--ink-3)">0.26</text>
+<line x1="204.7" y1="24" x2="204.7" y2="236" stroke="var(--ink-3)" stroke-width="1"/>
+<text x="0" y="52" font-size="12" fill="var(--ink-2)">up to 0.25</text>
+<text x="0" y="68" font-size="11" fill="var(--ink-3)">67 compounds</text>
+<g><title>Ridge on the fingerprint, up to 0.25: 0.017 (95 % CI -0.018 to 0.051), 67 compounds</title>
+<line x1="180.1" y1="47.0" x2="273.3" y2="47.0" stroke="var(--bar)" stroke-width="2" stroke-linecap="round"/>
+<circle cx="227.5" cy="47.0" r="5" fill="var(--bar)" stroke="var(--surface)" stroke-width="2"/>
+<text x="281.3" y="51.0" font-size="11" fill="var(--ink-2)">0.017</text>
+</g>
+<g><title>Nearest training compound, up to 0.25: 0.037 (95 % CI 0.003 to 0.072), 67 compounds</title>
+<line x1="209.1" y1="73.0" x2="301.7" y2="73.0" stroke="var(--bar-2)" stroke-width="2" stroke-linecap="round"/>
+<circle cx="254.8" cy="73.0" r="5" fill="var(--bar-2)" stroke="var(--surface)" stroke-width="2"/>
+<text x="309.7" y="77.0" font-size="11" fill="var(--ink-2)">0.037</text>
+</g>
+<text x="0" y="118" font-size="12" fill="var(--ink-2)">0.25 to 0.4</text>
+<text x="0" y="134" font-size="11" fill="var(--ink-3)">60 compounds</text>
+<g><title>Ridge on the fingerprint, 0.25 to 0.4: 0.053 (95 % CI 0.006 to 0.102), 60 compounds</title>
+<line x1="212.6" y1="113.0" x2="341.1" y2="113.0" stroke="var(--bar)" stroke-width="2" stroke-linecap="round"/>
+<circle cx="276.3" cy="113.0" r="5" fill="var(--bar)" stroke="var(--surface)" stroke-width="2"/>
+<text x="349.1" y="117.0" font-size="11" fill="var(--ink-2)">0.053</text>
+</g>
+<g><title>Nearest training compound, 0.25 to 0.4: 0.138 (95 % CI 0.084 to 0.195), 60 compounds</title>
+<line x1="317.9" y1="139.0" x2="465.8" y2="139.0" stroke="var(--bar-2)" stroke-width="2" stroke-linecap="round"/>
+<circle cx="389.2" cy="139.0" r="5" fill="var(--bar-2)" stroke="var(--surface)" stroke-width="2"/>
+<text x="473.8" y="143.0" font-size="11" fill="var(--ink-2)">0.138</text>
+</g>
+<text x="0" y="184" font-size="12" fill="var(--ink-2)">above 0.4</text>
+<text x="0" y="200" font-size="11" fill="var(--ink-3)">13 compounds</text>
+<g><title>Ridge on the fingerprint, above 0.4: 0.183 (95 % CI 0.106 to 0.251), 13 compounds</title>
+<line x1="346.4" y1="179.0" x2="540.8" y2="179.0" stroke="var(--bar)" stroke-width="2" stroke-linecap="round"/>
+<circle cx="450.5" cy="179.0" r="5" fill="var(--bar)" stroke="var(--surface)" stroke-width="2"/>
+<text x="548.8" y="183.0" font-size="11" fill="var(--ink-2)">0.183</text>
+</g>
+<g><title>Nearest training compound, above 0.4: 0.198 (95 % CI 0.130 to 0.262), 13 compounds</title>
+<line x1="379.3" y1="205.0" x2="555.9" y2="205.0" stroke="var(--bar-2)" stroke-width="2" stroke-linecap="round"/>
+<circle cx="469.8" cy="205.0" r="5" fill="var(--bar-2)" stroke="var(--surface)" stroke-width="2"/>
+<text x="563.9" y="209.0" font-size="11" fill="var(--ink-2)">0.198</text>
+</g>
+<text x="368" y="268" text-anchor="middle" font-size="11" fill="var(--ink-3)">correlation after the cell-type mean is removed</text>
+</svg>
+<figcaption>Correlation after the cell-type mean is removed, with 95&thinsp;% intervals over compounds.
+Chemical similarity is Tanimoto on the same fingerprints the model used. Intervals, not point estimates,
+because 140 compounds is not many; the top bin holds only 13.</figcaption>
+</figure>
+
+<div class="scroll"><table class="plain">
+<thead><tr><th>Similarity to nearest training compound</th><th class="num">Compounds</th>
+<th class="num">Ridge</th><th class="num">Nearest compound</th></tr></thead>
+<tbody><tr><td>up to 0.25</td><td class='num'>67</td><td class='num'>0.017 <span class='muted'>(&minus;0.018 to 0.051)</span></td><td class='num'>0.037 <span class='muted'>(0.003 to 0.072)</span></td></tr><tr><td>0.25 to 0.4</td><td class='num'>60</td><td class='num'>0.053 <span class='muted'>(0.006 to 0.102)</span></td><td class='num'>0.138 <span class='muted'>(0.084 to 0.195)</span></td></tr><tr><td>above 0.4</td><td class='num'>13</td><td class='num'>0.183 <span class='muted'>(0.106 to 0.251)</span></td><td class='num'>0.198 <span class='muted'>(0.130 to 0.262)</span></td></tr></tbody>
+</table></div>
+
+<h2>The steroid test, in detail</h2>
+<p>Prednisolone induces TSC22D3 and FKBP5 through the glucocorticoid receptor &mdash; the most reliable
+pharmacology in this dataset, and the easiest thing a working model should recover. With every prednisolone
+row removed from training, mometasone furoate remains, a steroid 0.29 similar.</p>
+
+<div class="scroll"><table class="plain">
+<thead><tr><th>Training set</th><th>Gene</th><th class="num">Measured</th><th class="num">Ridge</th>
+<th class="num">Cell-type mean</th><th class="num">Nearest compound</th><th>Which compound</th></tr></thead>
+<tbody><tr><td>mometasone kept in training</td><td>TSC22D3</td><td class='num'>2.35</td><td class='num'>0.21</td><td class='num'>0.06</td><td class='num'>3.15</td><td>Mometasone Furoate <span class='muted'>(0.29)</span></td></tr><tr><td>mometasone kept in training</td><td>FKBP5</td><td class='num'>2.38</td><td class='num'>&minus;0.04</td><td class='num'>&minus;0.27</td><td class='num'>2.47</td><td>Mometasone Furoate <span class='muted'>(0.29)</span></td></tr><tr><td>no glucocorticoid in training</td><td>TSC22D3</td><td class='num'>2.35</td><td class='num'>&minus;0.00</td><td class='num'>0.04</td><td class='num'>&minus;0.74</td><td>Doxorubicin <span class='muted'>(0.17)</span></td></tr><tr><td>no glucocorticoid in training</td><td>FKBP5</td><td class='num'>2.38</td><td class='num'>&minus;0.27</td><td class='num'>&minus;0.29</td><td class='num'>0.24</td><td>Doxorubicin <span class='muted'>(0.17)</span></td></tr></tbody>
+</table></div>
+<p>The model predicts almost nothing. Looking up mometasone lands close to the measured value. With no
+steroid at all in training the lookup fails too, which is the honest limit of that method: it can only
+transfer from chemistry it has seen.</p>
+
+<h2>The dataset, and why the published split is not a test of new chemistry</h2>
+<p>OP3's own split holds out B and myeloid cells, not compounds: all 76 test compounds
+also appear in training in T and NK cells. It measures transfer between cell types. That is why the verdict
+above uses a whole-compound holdout instead, and why the published split can be used to show that compound
+signal is present.</p>
+
+<div class="scroll"><table class="plain">
+<thead><tr><th>Cell type</th><th class="num">Compounds in train</th><th class="num">In test</th><th class="num">Total</th></tr></thead>
+<tbody><tr><td>B cells</td><td class='num'>63</td><td class='num'>76</td><td class='num'>139</td></tr><tr><td>Myeloid cells</td><td class='num'>60</td><td class='num'>75</td><td class='num'>135</td></tr><tr><td>NK cells</td><td class='num'>139</td><td class='num'>0</td><td class='num'>139</td></tr><tr><td>T cells</td><td class='num'>140</td><td class='num'>0</td><td class='num'>140</td></tr></tbody>
+</table></div>
+
+<h3>On the published split, compound-specific signal</h3>
+<div class="scroll"><table class="plain">
+<thead><tr><th>Method</th><th class="num">After removing the cell-type mean</th></tr></thead>
+<tbody><tr><td>Ridge on the fingerprint</td><td class='num'>0.189 <span class='muted'>(0.151 to 0.224)</span></td></tr><tr><td>The same compound, measured in T and NK cells</td><td class='num'>0.269 <span class='muted'>(0.245 to 0.293)</span></td></tr><tr><td>Nearest training compound</td><td class='num'>0.099 <span class='muted'>(0.057 to 0.146)</span></td></tr></tbody>
+</table></div>
+<p>Carrying a compound's own measured profile across cell types beats the structure model. The signal is
+there to be predicted; fingerprints are not the way to reach it.</p>
+
+<h2>Both target measures agree</h2>
+<p>The run was repeated against clipped signed log<sub>10</sub> p, the measure the published benchmark
+scores on. logFC decides the verdict here because p-value-based measures scale with how many
+cells a cell type contributed, while an effect size does not.</p>
+<div class="scroll"><table class="plain">
+<thead><tr><th>Criterion, on clipped signed log<sub>10</sub> p</th><th class="num">Difference in correlation</th><th>Result</th></tr></thead>
+<tbody><tr><td>Beats the global mean</td><td class='num'>0.077 <span class='muted'>(0.071 to 0.084)</span></td><td class='pass'>pass</td></tr><tr><td>Beats the cell-type mean</td><td class='num'>0.004 <span class='muted'>(&minus;0.001 to 0.009)</span></td><td class='fail'>FAIL</td></tr><tr><td>Beats the permuted null</td><td class='num'>0.009 <span class='muted'>(0.005 to 0.014)</span></td><td class='pass'>pass</td></tr><tr><td>Beats the nearest training compound</td><td class='num'>0.129 <span class='muted'>(0.103 to 0.152)</span></td><td class='pass'>pass</td></tr></tbody>
+</table></div>
+<p>Nearest compound again wins on compound-specific signal, by
+0.047 <span class='muted'>(0.023 to 0.074)</span>.</p>
+
+<h2>What this changes</h2>
+<ul>
+<li><b>Do not scale the same model.</b> The rule set before the run was that a bigger model of the same kind
+does not follow a failure like this. <span class="tag k">known</span></li>
+<li><b>Test the molecule representation next, holding everything else fixed.</b> Same folds, same seed, same
+baselines, with a pretrained chemical language model in place of the fingerprint. If that also cannot beat
+nearest compound, the limit is 140 compounds of sparse chemistry rather than the encoder.
+<span class="tag i">inferred</span></li>
+<li><b>Denser chemistry matters more than a bigger model.</b> Pretraining on LINCS L1000, roughly 30&thinsp;000
+compounds, is the only route to enough chemical coverage for a structure-to-response map. This result is
+evidence for that, not against it. <span class="tag i">inferred</span></li>
+<li><b>For the lupus application today, use the lookup.</b> For any candidate within about 0.4 of something
+OP3 measured, the defensible answer is that neighbour's measured profile. 15 of our own
+candidate compounds were measured in OP3 directly, so for those there is no prediction to make.
+<span class="tag k">known</span></li>
+</ul>
+
+<h2>Honest limits</h2>
+<ul>
+<li><b>One seed, one set of folds.</b> Seed 0; stability across seeds was not tested.</li>
+<li><b>No noise ceiling.</b> These summarised tables carry no replicates, so how much of the unexplained
+variation is simply measurement noise cannot be estimated from them.</li>
+<li><b>The similarity bins were chosen after seeing results</b> and the intervals are not adjusted for having
+looked. Treat that section as a lead.</li>
+<li><b>Healthy cells, in culture.</b> OP3 is PBMCs from 3 healthy donors at a single dose for 24 hours.
+Nothing here tests prediction in diseased cells, which is where this pipeline is aimed.</li>
+<li><b>A linear model on a binary fingerprint is a floor, not a fair test of chemistry.</b> It cannot
+represent a compound acting differently in different cell types. That is deliberate for a baseline, and it
+is why the next step is the representation.</li>
+</ul>
+
+<h2>Reproducing this</h2>
+<p>On the compute node, one command runs the content checks, then the pilot, and packs the outputs:</p>
+<p><code>scripts/op3_report.sh</code></p>
+<p>Inputs are the Open Problems build of OP3 (<code>de_train.h5ad</code>, <code>de_test.h5ad</code>), fetched by
+<code>scripts/fetch_op3.sh</code>. 5 folds, 20 permutations for the null, 2000 bootstrap
+resamples, seed 0. The model, baselines and criteria are in <code>scripts/op3_ridge.py</code>, with a
+self-test in <code>scripts/test_op3_ridge.py</code> that requires a planted signal to be recovered and pure
+noise not to be. The outputs this page is built from are in <code>analysis/op3_stage_p/</code>, and every
+number here is read or recomputed from them by <code>scripts/build_op3_page.py</code>, which fails if a
+recomputed value disagrees with the run's own summary.</p>
+
+<footer>
+<p>Diagnostic report, not a result for publication. OP3 is Szalata et&nbsp;al., NeurIPS 2024 Datasets and
+Benchmarks (GEO GSE279945), CC&nbsp;BY&nbsp;4.0. 553 profiles, 5317 genes.
+Glucocorticoid direction confirmed in all 16 steroid measurements before any modelling.
+&middot; <a href="index.html">All reports</a></p>
+</footer>
+</main>
+</body>
+</html>

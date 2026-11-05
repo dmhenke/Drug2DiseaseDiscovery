@@ -73,6 +73,8 @@ Tested on synthetic values only: planted signal is recovered, pure noise falls b
 
 ### Stage P result: FAIL (node, 2026-11-04, commit 20a5847, seed 0)
 
+Published as [`docs/op3-stage-p.html`](../docs/op3-stage-p.html); outputs in `analysis/op3_stage_p/`.
+
 Whole-compound holdout, 140 compounds, CIs over compounds. Both target layers give the same verdict; logFC shown.
 
 | Criterion | Result | Verdict |

@@ -1,0 +1,62 @@
+evaluation	metric	comparison	estimate	ci_lo	ci_hi	n_compounds
+official	r	global_mean	0.2200	0.1812	0.2551	76.0000
+official	r	ridge_minus_global_mean	0.1055	0.0910	0.1207	76.0000
+official	r	cell_type_mean	0.2972	0.2569	0.3404	76.0000
+official	r	ridge_minus_cell_type_mean	0.0282	0.0201	0.0376	76.0000
+official	r	ridge	0.3254	0.2816	0.3710	76.0000
+official	r	nearest_compound	0.1789	0.1355	0.2266	76.0000
+official	r	ridge_minus_nearest_compound	0.1465	0.1096	0.1856	76.0000
+official	r	permuted	0.3178	0.2761	0.3567	76.0000
+official	r	ridge_minus_permuted	0.0076	0.0031	0.0122	76.0000
+official	r	same_compound	0.2599	0.2292	0.2914	76.0000
+official	r	ridge_minus_same_compound	0.0655	0.0339	0.0956	76.0000
+official	r_resid	global_mean	0.1483	0.0969	0.1985	76.0000
+official	r_resid	ridge_minus_global_mean	0.0508	-0.0175	0.1255	76.0000
+official	r_resid	cell_type_mean				
+official	r_resid	ridge	0.1990	0.1625	0.2346	76.0000
+official	r_resid	nearest_compound	0.1110	0.0675	0.1570	76.0000
+official	r_resid	ridge_minus_nearest_compound	0.0881	0.0434	0.1325	76.0000
+official	r_resid	permuted	0.1682	0.1438	0.1955	76.0000
+official	r_resid	ridge_minus_permuted	0.0309	0.0075	0.0531	76.0000
+official	r_resid	same_compound	0.3186	0.2923	0.3446	76.0000
+official	r_resid	ridge_minus_same_compound	-0.1196	-0.1541	-0.0819	76.0000
+official	rmse	global_mean	0.8981	0.8197	0.9795	76.0000
+official	rmse	ridge_minus_global_mean	-0.0216	-0.0365	-0.0069	76.0000
+official	rmse	cell_type_mean	0.8913	0.8222	0.9643	76.0000
+official	rmse	ridge_minus_cell_type_mean	-0.0149	-0.0205	-0.0107	76.0000
+official	rmse	ridge	0.8764	0.8142	0.9480	76.0000
+official	rmse	nearest_compound	1.2818	1.1937	1.3765	76.0000
+official	rmse	ridge_minus_nearest_compound	-0.4054	-0.4831	-0.3310	76.0000
+official	rmse	permuted	0.8809	0.8166	0.9503	76.0000
+official	rmse	ridge_minus_permuted	-0.0045	-0.0072	-0.0021	76.0000
+official	rmse	same_compound	0.9417	0.8740	1.0142	76.0000
+official	rmse	ridge_minus_same_compound	-0.0653	-0.0812	-0.0492	76.0000
+whole_compound	r	global_mean	0.2304	0.2014	0.2591	140.0000
+whole_compound	r	ridge_minus_global_mean	0.0774	0.0713	0.0835	140.0000
+whole_compound	r	cell_type_mean	0.3039	0.2765	0.3345	140.0000
+whole_compound	r	ridge_minus_cell_type_mean	0.0040	-0.0006	0.0091	140.0000
+whole_compound	r	ridge	0.3078	0.2769	0.3374	140.0000
+whole_compound	r	nearest_compound	0.1794	0.1498	0.2095	140.0000
+whole_compound	r	ridge_minus_nearest_compound	0.1285	0.1034	0.1522	140.0000
+whole_compound	r	permuted	0.2985	0.2697	0.3265	140.0000
+whole_compound	r	ridge_minus_permuted	0.0094	0.0047	0.0144	140.0000
+whole_compound	r	same_compound				
+whole_compound	r_resid	global_mean	0.0583	0.0368	0.0798	140.0000
+whole_compound	r_resid	ridge_minus_global_mean	0.0001	-0.0377	0.0385	140.0000
+whole_compound	r_resid	cell_type_mean				
+whole_compound	r_resid	ridge	0.0584	0.0321	0.0840	140.0000
+whole_compound	r_resid	nearest_compound	0.1058	0.0764	0.1343	140.0000
+whole_compound	r_resid	ridge_minus_nearest_compound	-0.0474	-0.0742	-0.0231	140.0000
+whole_compound	r_resid	permuted	0.0003	-0.0051	0.0056	140.0000
+whole_compound	r_resid	ridge_minus_permuted	0.0581	0.0324	0.0854	140.0000
+whole_compound	r_resid	same_compound				
+whole_compound	rmse	global_mean	0.8941	0.8345	0.9630	140.0000
+whole_compound	rmse	ridge_minus_global_mean	-0.0176	-0.0229	-0.0129	140.0000
+whole_compound	rmse	cell_type_mean	0.8780	0.8204	0.9404	140.0000
+whole_compound	rmse	ridge_minus_cell_type_mean	-0.0015	-0.0038	0.0006	140.0000
+whole_compound	rmse	ridge	0.8765	0.8168	0.9401	140.0000
+whole_compound	rmse	nearest_compound	1.1617	1.1000	1.2280	140.0000
+whole_compound	rmse	ridge_minus_nearest_compound	-0.2852	-0.3402	-0.2361	140.0000
+whole_compound	rmse	permuted	0.8805	0.8221	0.9447	140.0000
+whole_compound	rmse	ridge_minus_permuted	-0.0040	-0.0062	-0.0019	140.0000
+whole_compound	rmse	same_compound				

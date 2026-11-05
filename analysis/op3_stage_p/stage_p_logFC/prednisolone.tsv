@@ -1,0 +1,5 @@
+training	gene	measured	ridge	cell_type_mean	nearest_compound	nearest_name	tanimoto
+mometasone_in_training	TSC22D3	2.347	0.210	0.062	3.148	Mometasone Furoate	0.293
+mometasone_in_training	FKBP5	2.380	-0.041	-0.267	2.473	Mometasone Furoate	0.293
+no_glucocorticoid	TSC22D3	2.347	-0.003	0.039	-0.744	Doxorubicin	0.173
+no_glucocorticoid	FKBP5	2.380	-0.271	-0.288	0.244	Doxorubicin	0.173
