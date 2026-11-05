@@ -1,0 +1,5 @@
+population	op3_cell_type	signature_genes	measured_in_op3	compounds	tests_for_bh
+Classical mono	Myeloid cells	66	61	135	135
+Non-classical mono	Myeloid cells	30	26	135	135
+NK	NK cells	27	27	139	139
+CD4 T	T cells	11	11	140	140

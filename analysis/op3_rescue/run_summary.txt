@@ -1,0 +1,40 @@
+Run on shared/perturbation/op3; commit d805845; 1 changed files; host qrtz-Precision-7820-Tower; seed 0; nulls 20000; gene bootstraps 1000
+
+        population op3_cell_type  signature_genes  measured_in_op3  compounds  tests_for_bh
+    Classical mono Myeloid cells               66               61        135           135
+Non-classical mono Myeloid cells               30               26        135           135
+                NK      NK cells               27               27        139           139
+             CD4 T       T cells               11               11        140           140
+
+  [ok] Classical mono: 92% of signature genes measured (want at least 50%)
+  [ok] Non-classical mono: 87% of signature genes measured (want at least 50%)
+  [ok] NK: 100% of signature genes measured (want at least 50%)
+  [ok] CD4 T: 100% of signature genes measured (want at least 50%)
+
+Population, compounds with q < 0.05 and match_gain > 0:
+  CD4 T: 19 of 140; median match_gain -0.344
+  Classical mono: 95 of 135; median match_gain 0.189
+  NK: 18 of 139; median match_gain -0.107
+  Non-classical mono: 93 of 135; median match_gain 0.160
+
+Positive controls, rank by match_gain (recorded, not a gate):
+  CD4 T: Ruxolitinib rank 106/140, match_gain -0.795, q 0.997
+  CD4 T: GLPG0634 rank 31/140, match_gain 0.118, q 0.194
+  CD4 T: Prednisolone rank 114/140, match_gain -0.950, q 0.997
+  CD4 T: Mometasone Furoate rank 116/140, match_gain -0.976, q 0.997
+  CD4 T: Methotrexate rank 45/140, match_gain -0.030, q 0.710
+  Classical mono: Ruxolitinib rank 110/135, match_gain -0.142, q 1.000
+  Classical mono: GLPG0634 rank 5/135, match_gain 0.546, q 0.000
+  Classical mono: Prednisolone rank 86/135, match_gain 0.075, q 0.001
+  Classical mono: Mometasone Furoate rank 37/135, match_gain 0.336, q 0.000
+  Classical mono: Methotrexate rank 127/135, match_gain -0.389, q 1.000
+  NK: Ruxolitinib rank 44/139, match_gain -0.017, q 0.098
+  NK: GLPG0634 rank 35/139, match_gain -0.000, q 0.089
+  NK: Prednisolone rank 136/139, match_gain -0.732, q 0.985
+  NK: Mometasone Furoate rank 137/139, match_gain -0.789, q 0.971
+  NK: Methotrexate rank 107/139, match_gain -0.266, q 0.907
+  Non-classical mono: Ruxolitinib rank 76/135, match_gain 0.132, q 0.018
+  Non-classical mono: GLPG0634 rank 1/135, match_gain 0.666, q 0.000
+  Non-classical mono: Prednisolone rank 89/135, match_gain 0.069, q 0.027
+  Non-classical mono: Mometasone Furoate rank 51/135, match_gain 0.273, q 0.000
+  Non-classical mono: Methotrexate rank 133/135, match_gain -0.463, q 1.000
