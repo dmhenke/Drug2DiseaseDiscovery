@@ -57,7 +57,7 @@ def design(obs):
     tan = inter / (n[:, None] + n[None, :] - inter)
     row_comp = obs.sm_name.map({s: i for i, s in enumerate(comp.sm_name)}).to_numpy()
     # InChIKey connectivity block, so stereoisomers of one molecule can never straddle a split
-    block = pd.factorize([k[:14] for k in keys])[0]
+    block = np.unique([k[:14] for k in keys], return_inverse=True)[1]
     return comp, fp, tan, row_comp, block[row_comp]
 
 

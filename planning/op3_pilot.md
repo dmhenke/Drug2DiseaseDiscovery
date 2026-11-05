@@ -7,9 +7,8 @@ Two stages. **Stage P** is a pilot that can be run in an afternoon on a laptop a
 can fail cheaply. **Stage F** is the full run: pretrained molecule encoders, L1000
 pretraining, single-cell resolution, on the node's GPU.
 
-**Run Stage F only if Stage P passes.** If a fingerprint model cannot beat the
-baselines on OP3's own held-out compounds, a larger model on the same data will
-not rescue it; the problem is the data or the task (**Inferred**).
+**Stage P failed on 2026-11-04** (result below). Under the rule set before running, Stage F does not
+start on a bigger model of the same kind. What the failure changes is recorded under Stage F.
 
 ## What OP3 actually contains (checked 2026-11-02)
 
@@ -72,6 +71,46 @@ the official split is reported alongside with an added `same_compound` baseline,
 **Run:** `scripts/op3_report.sh` on the node runs the checks, then this pilot, and packs the results.
 Tested on synthetic values only: planted signal is recovered, pure noise falls back to the cell-type mean.
 
+### Stage P result: FAIL (node, 2026-11-04, commit 20a5847, seed 0)
+
+Whole-compound holdout, 140 compounds, CIs over compounds. Both target layers give the same verdict; logFC shown.
+
+| Criterion | Result | Verdict |
+|---|---|---|
+| 1. Beats cell-type mean, r | difference 0.001 (-0.002 to 0.005) | **FAIL** |
+| 1. Beats global mean, r | difference 0.071 (0.064 to 0.077) | ok |
+| 1. Beats permuted null, r | difference 0.005 (0.001 to 0.008) | ok |
+| 2. Beats nearest compound, r | difference 0.144 (0.116 to 0.172) | ok, but see below |
+| 3. Unseen prednisolone, myeloid | TSC22D3 0.21, FKBP5 -0.04; measured 2.35 and 2.38 | **FAIL** |
+
+**Criterion 2 was badly specified, and its "ok" should not be read as a win.** Ridge chose heavy regularisation
+(alpha 1,000 to 10,000) and sits almost on the cell-type mean (r 0.336 vs 0.335), which raw r rewards; the
+cell-type mean alone would pass the same test. On compound-specific signal (`r_resid`, correlation after the
+cell-type mean is removed) nearest compound wins: 0.095 against ridge 0.048, difference -0.047 (-0.077 to -0.018).
+The criterion is left as written rather than rewritten after the fact.
+
+**Exploratory, decided after seeing the results.** Compound-specific signal tracks chemical proximity to a
+training compound. `r_resid` binned by nearest-neighbour Tanimoto:
+
+| Tanimoto | Compounds | Ridge | Nearest compound |
+|---|---|---|---|
+| up to 0.25 | 67 | 0.017 (-0.018 to 0.051) | 0.037 (0.003 to 0.072) |
+| 0.25 to 0.4 | 60 | 0.053 (0.006 to 0.100) | 0.138 (0.083 to 0.195) |
+| above 0.4 | 13 | 0.183 (0.107 to 0.252) | 0.198 (0.131 to 0.262) |
+
+Nearest compound recovers known mechanism pairs: belinostat and resminostat (HDAC, 0.77 and 0.76), AT13387 and
+ganetespib (HSP90, 0.70). For unseen prednisolone it picks mometasone and predicts TSC22D3 3.15, FKBP5 2.47,
+against measured 2.35 and 2.38.
+
+**Not checked:** other seeds or fold assignments, and the noise ceiling, which these DE tables cannot give
+because they carry no replicates.
+
+**What this does and does not say.** It says a 2048-bit fingerprint with a linear model cannot predict a held-out
+compound's effect on PBMCs beyond the cell-type average. It does not say the data lack compound signal: the
+official split's `same_compound` baseline reaches `r_resid` 0.269, well above ridge's 0.189, so a compound's
+effect in T and NK cells does predict its effect in B and myeloid cells. The failure is structure to response,
+not response to response.
+
 ## Stage F — full run
 
 Three changes, each testable on its own against Stage P:
@@ -82,9 +121,21 @@ Three changes, each testable on its own against Stage P:
 | **F2. L1000 pretraining, then fine-tune on OP3** — chemCPA's central claim | ~30k compounds of bulk signal to generalize from. Needs the L1000 level-5 matrix (several GB) and gene-space alignment with OP3's 5,317 | Hours on the P4000 (**Guess**) |
 | **F3. Single-cell chemCPA** on `sc_train.h5ad` (893 MB, ~300k cells): latent `z_treated = z_basal + g(m, dose)`, negative-binomial decoder | Per-cell predictions, which is what the SLE application needs | MLP autoencoder; should fit in 8 GB (**Guess**, untested) |
 
-**Each must beat Stage P on the same held-out compounds** to be kept. Stage P's
-ridge model is the control for the whole of Stage F, and the paper to beat for
-F2 is chemCPA's own claim that bulk pretraining helps on unseen drugs.
+**Each must beat Stage P on the same held-out compounds**, on `r_resid` rather than raw r, since Stage P
+showed raw r is passed by the cell-type mean alone. Stage P's nearest-compound baseline, not its ridge
+model, is the bar: it is the stronger of the two on compound-specific signal.
+
+**Revised after the Stage P failure (2026-11-04).** The order changes, because the failure points at the
+molecule representation, not at model size:
+
+- **F1 is now the next step, and is a test of representation, not of capacity.** Swap the fingerprint for
+  ChemBERTa, keeping everything else identical: same folds, same seed, same baselines, same ridge. If a
+  pretrained encoder also cannot beat nearest compound on `r_resid`, the limit is 140 compounds of sparse
+  chemistry, and F2 and F3 should not be attempted on OP3 alone.
+- **F2 gains in importance.** L1000's roughly 30k compounds are the only route to dense enough chemistry for
+  a structure-to-response map, and Stage P is evidence for that claim rather than against it.
+- **F3 is unaffected in principle** but has nothing to condition on until F1 or F2 produces a usable molecule
+  term. A single-cell model with no working chemistry term would reduce to a cell-type average per compound.
 
 **Dose:** OP3 is single-dose (1 µM), so the dose term `g(m, d)` cannot be fitted from
 OP3 alone. Either fix dose, or fit it from L1000/sciPlex, which are multi-dose
@@ -101,7 +152,9 @@ OP3 alone. Either fix dose, or fit it from L1000/sciPlex, which are multi-dose
 ## Risks, in the order they are likely to bite
 
 1. **Compound-specific signal may be weak.** OP3 itself reports that many compounds give subtle effects and that DE is sensitive to low-count genes. Stage P criterion 1 is exactly this test, which is why it comes first.
-2. **Nearest-neighbour may win.** Common in this field. It would be a real result and should be reported, not buried.
+2. **Nearest-neighbour wins (confirmed 2026-11-04, not a prediction any more).** On compound-specific signal
+   it beats ridge by 0.047 (0.018 to 0.077). For any compound within Tanimoto 0.4 of something OP3 measured,
+   the honest method today is to look up that neighbour's measured profile.
 3. **Chemistry is sparse (Known, from `compounds.tsv`).** Median nearest-neighbour Tanimoto among the 140 compounds is 0.26; only 11 % reach 0.4. Ruxolitinib's nearest neighbour is crizotinib at 0.18, and filgotinib (GLPG0634) is not close to it despite sharing a target. Fingerprints may not connect compounds that act alike. Expect higher numbers on OP3's own split than on the whole-compound holdout, because the compound is already seen in other cell types.
 4. **Healthy PBMC → SLE monocyte transfer is unvalidated** and probably cannot be validated without treated SLE cells.
 5. **Three donors** means donor effects cannot be separated from compound effects well. Keep donor as a covariate and never as a split.
