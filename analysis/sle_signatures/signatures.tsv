@@ -1,0 +1,135 @@
+population	op3_cell_type	gene	log2fc_sle_vs_healthy	padj	base_mean
+Classical mono	Myeloid cells	GBP1	1.5922	4.37e-05	6.6
+Classical mono	Myeloid cells	IFI27	3.7392	7.04e-05	20.7
+Classical mono	Myeloid cells	PARP9	1.1964	9.38e-05	7.0
+Classical mono	Myeloid cells	MT2A	1.3599	0.000248	133.4
+Classical mono	Myeloid cells	EPSTI1	1.719	0.000346	15.1
+Classical mono	Myeloid cells	IFI6	1.8266	0.000414	66.6
+Classical mono	Myeloid cells	PLAC8	0.9118	0.000414	45.4
+Classical mono	Myeloid cells	ISG15	1.7185	0.000486	87.4
+Classical mono	Myeloid cells	IFIT3	2.7533	0.000614	4.4
+Classical mono	Myeloid cells	IFI44L	2.3106	0.000655	18.8
+Classical mono	Myeloid cells	IFI44	1.6361	0.000989	12.1
+Classical mono	Myeloid cells	TRIM22	0.8238	0.00105	14.8
+Classical mono	Myeloid cells	SAMD9L	1.2391	0.00128	6.6
+Classical mono	Myeloid cells	XAF1	1.2107	0.00128	10.7
+Classical mono	Myeloid cells	LY6E	1.3979	0.00131	90.7
+Classical mono	Myeloid cells	NEXN	2.3413	0.00147	1.9
+Classical mono	Myeloid cells	IFITM3	1.6294	0.00147	122.8
+Classical mono	Myeloid cells	IFI35	1.0163	0.002	14.1
+Classical mono	Myeloid cells	LAP3	0.7813	0.00269	26.5
+Classical mono	Myeloid cells	RSAD2	2.1647	0.00271	2.2
+Classical mono	Myeloid cells	RNF213	0.6362	0.00316	22.9
+Classical mono	Myeloid cells	JAK2	0.8588	0.00462	7.5
+Classical mono	Myeloid cells	SERPING1	1.9039	0.00521	2.1
+Classical mono	Myeloid cells	CHMP5	0.6857	0.00536	18.7
+Classical mono	Myeloid cells	PSMB9	0.5024	0.00569	69.5
+Classical mono	Myeloid cells	DTX3L	1.0752	0.00617	5.6
+Classical mono	Myeloid cells	SIGLEC1	2.5568	0.00617	3.9
+Classical mono	Myeloid cells	SSB	0.5385	0.00747	22.7
+Classical mono	Myeloid cells	MT1X	0.6148	0.00747	21.3
+Classical mono	Myeloid cells	CMPK2	1.6322	0.00947	3.3
+Classical mono	Myeloid cells	EIF2AK2	0.9298	0.00947	8.1
+Classical mono	Myeloid cells	PDCD10	0.6402	0.00947	11.7
+Classical mono	Myeloid cells	SAMD9	1.1273	0.00947	6.4
+Classical mono	Myeloid cells	IFIT1	2.4191	0.00947	3.3
+Classical mono	Myeloid cells	IRF7	0.9402	0.0114	12.1
+Classical mono	Myeloid cells	IFIT2	1.606	0.0142	5.2
+Classical mono	Myeloid cells	APOL2	1.2667	0.0146	2.7
+Classical mono	Myeloid cells	MOB1A	0.457	0.0155	33.2
+Classical mono	Myeloid cells	TNFSF10	0.7455	0.0155	30.8
+Classical mono	Myeloid cells	PSME2	0.4952	0.0155	102.5
+Classical mono	Myeloid cells	LGALS3BP	1.9551	0.0155	3.8
+Classical mono	Myeloid cells	MX2	1.0019	0.0164	10.9
+Classical mono	Myeloid cells	OAS1	0.9769	0.0183	12.2
+Classical mono	Myeloid cells	CD53	0.3825	0.0203	35.1
+Classical mono	Myeloid cells	STAT1	0.681	0.0237	26.1
+Classical mono	Myeloid cells	PPM1K	1.112	0.0258	2.8
+Classical mono	Myeloid cells	RBX1	0.3132	0.0261	74.0
+Classical mono	Myeloid cells	APOBEC3A	1.2179	0.0272	38.9
+Classical mono	Myeloid cells	TNFSF13B	0.3828	0.0274	78.5
+Classical mono	Myeloid cells	GBP2	0.7647	0.0277	12.1
+Classical mono	Myeloid cells	GBP5	1.2636	0.0277	2.6
+Classical mono	Myeloid cells	EIF1	-0.2637	0.0277	537.5
+Classical mono	Myeloid cells	IFI16	0.4691	0.0283	34.9
+Classical mono	Myeloid cells	EIF3L	-0.4401	0.0315	41.5
+Classical mono	Myeloid cells	SEM1	0.3263	0.0347	48.6
+Classical mono	Myeloid cells	ISG20	0.6777	0.0347	9.7
+Classical mono	Myeloid cells	APOL6	0.757	0.0347	8.4
+Classical mono	Myeloid cells	MX1	1.3583	0.0361	11.0
+Classical mono	Myeloid cells	IFITM1	1.855	0.0363	7.2
+Classical mono	Myeloid cells	ERICH1	0.492	0.0369	15.1
+Classical mono	Myeloid cells	SLIRP	0.3372	0.0398	39.5
+Classical mono	Myeloid cells	SNRPG	0.3153	0.0447	45.0
+Classical mono	Myeloid cells	MRPS18C	0.6288	0.0465	13.8
+Classical mono	Myeloid cells	IER3	-0.5458	0.0465	18.8
+Classical mono	Myeloid cells	MNDA	0.4944	0.0468	279.9
+Classical mono	Myeloid cells	PCBP2	-0.3063	0.0473	69.2
+Non-classical mono	Myeloid cells	ISG15	2.0027	0.000305	34.0
+Non-classical mono	Myeloid cells	IFI6	1.9251	0.000585	13.2
+Non-classical mono	Myeloid cells	TNFSF10	1.931	0.000585	12.8
+Non-classical mono	Myeloid cells	IFI27	5.1959	0.000585	16.4
+Non-classical mono	Myeloid cells	RBX1	0.6416	0.000585	26.1
+Non-classical mono	Myeloid cells	B2M	0.2375	0.00541	1063.4
+Non-classical mono	Myeloid cells	OAS1	0.8932	0.0153	11.0
+Non-classical mono	Myeloid cells	LY6E	0.8331	0.0177	47.5
+Non-classical mono	Myeloid cells	PSMA4	0.5126	0.0288	28.5
+Non-classical mono	Myeloid cells	C1orf162	0.4197	0.0288	30.0
+Non-classical mono	Myeloid cells	IFI16	0.7115	0.0288	8.5
+Non-classical mono	Myeloid cells	PSMB9	0.5179	0.0288	32.1
+Non-classical mono	Myeloid cells	IFITM3	0.9669	0.0288	93.3
+Non-classical mono	Myeloid cells	MS4A4A	1.0033	0.0288	8.5
+Non-classical mono	Myeloid cells	NOP10	0.451	0.0288	21.1
+Non-classical mono	Myeloid cells	MT2A	1.012	0.0288	70.4
+Non-classical mono	Myeloid cells	BST2	0.6498	0.0288	15.0
+Non-classical mono	Myeloid cells	EEF1A1	-0.3348	0.0291	262.0
+Non-classical mono	Myeloid cells	MNDA	0.6367	0.038	25.5
+Non-classical mono	Myeloid cells	TMSB10	0.2295	0.038	454.0
+Non-classical mono	Myeloid cells	BLVRA	0.6613	0.038	9.4
+Non-classical mono	Myeloid cells	TNFSF13B	0.7415	0.038	12.0
+Non-classical mono	Myeloid cells	EIF1	-0.3114	0.038	129.9
+Non-classical mono	Myeloid cells	EIF3F	-0.4625	0.0428	14.9
+Non-classical mono	Myeloid cells	IFITM1	1.8861	0.0438	13.5
+Non-classical mono	Myeloid cells	BLOC1S1	0.3732	0.0444	26.7
+Non-classical mono	Myeloid cells	CD53	0.5245	0.0474	14.8
+Non-classical mono	Myeloid cells	SLC25A5	-0.4442	0.0497	22.3
+Non-classical mono	Myeloid cells	SPI1	-0.3163	0.0497	41.1
+Non-classical mono	Myeloid cells	ACTG1	-0.391	0.0497	39.3
+NK	NK cells	LGALS1	0.7454	7.13e-05	48.1
+NK	NK cells	FCER1G	0.4247	0.00903	81.8
+NK	NK cells	CXCR4	-0.776	0.0135	23.6
+NK	NK cells	SEM1	0.6967	0.0135	9.1
+NK	NK cells	CEBPB	-0.7846	0.0135	10.0
+NK	NK cells	EMP3	0.3836	0.0135	35.7
+NK	NK cells	S100A11	0.6642	0.017	15.8
+NK	NK cells	ACTR3	0.5817	0.017	10.3
+NK	NK cells	GZMA	0.281	0.017	124.1
+NK	NK cells	LY6E	0.579	0.017	35.4
+NK	NK cells	FOS	-0.7443	0.017	42.4
+NK	NK cells	HNRNPA1	-0.3236	0.0172	43.1
+NK	NK cells	CIRBP	-0.3648	0.0172	34.6
+NK	NK cells	GIMAP7	0.6733	0.0227	11.7
+NK	NK cells	BAX	0.5448	0.0227	13.0
+NK	NK cells	EIF1	-0.2738	0.0266	125.1
+NK	NK cells	TMSB10	0.1878	0.027	347.2
+NK	NK cells	CORO1A	0.3294	0.0283	40.5
+NK	NK cells	TMBIM4	0.6312	0.0371	9.0
+NK	NK cells	PIK3R1	-0.7994	0.038	7.4
+NK	NK cells	MGAT4A	-0.7723	0.041	9.1
+NK	NK cells	HLA-DPA1	0.5931	0.0448	8.0
+NK	NK cells	TSC22D3	-0.4795	0.0448	33.8
+NK	NK cells	DYNLT1	-0.5745	0.0467	8.7
+NK	NK cells	PLAC8	0.295	0.047	44.1
+NK	NK cells	TBCB	0.4783	0.047	10.7
+NK	NK cells	PABPC1	-0.4235	0.0478	24.9
+CD4 T	T cells	MYL12A	0.2663	0.00457	331.0
+CD4 T	T cells	FOS	-0.5597	0.0168	156.5
+CD4 T	T cells	B2M	0.1419	0.0168	5090.2
+CD4 T	T cells	FTL	-0.1989	0.0168	581.1
+CD4 T	T cells	LTB	0.223	0.0223	579.2
+CD4 T	T cells	SARAF	-0.2678	0.0223	188.6
+CD4 T	T cells	LEPROTL1	-0.3226	0.03	133.9
+CD4 T	T cells	CIRBP	-0.2438	0.03	138.0
+CD4 T	T cells	BTF3	-0.1446	0.0374	318.7
+CD4 T	T cells	UBA52	-0.153	0.046	672.9
+CD4 T	T cells	EEF1B2	-0.2476	0.0495	290.3
