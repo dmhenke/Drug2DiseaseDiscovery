@@ -110,16 +110,36 @@ Replicate first, pool later. Run with `scripts/run_expansion.sh`; nothing here h
   rank at Spearman ≈ 0.30 (CI 0.13–0.46), about twice the structure route, with no held-out chemistry
   (**Known**, within healthy PBMCs, so an optimistic bound for a cell line).
 
-So the compound axis grows with **measured** signatures from LINCS L1000 (~20k compounds, 248 lines), prioritised
-on PBMC by using each population's nearest haematopoietic line, and with the 140 OP3 compounds as the calibration
-set — OP3 chose its compounds for being in CMap, so the overlap exists by construction.
+So the compound axis grows with **measured** signatures from LINCS L1000, with the 140 OP3 compounds as the
+calibration set — OP3 chose its compounds for being in CMap, so the overlap exists by construction.
+
+**What the metadata triage actually found (run on the node 2026-11-06, `analysis/lincs_triage/`).** Two numbers
+reshaped the plan:
+
+- **LINCS is not 20k compounds in immune cells.** Phase I holds 19,808 distinct compounds and Phase II 1,767,
+  but the haematopoietic lines are thin: in Phase I, U937 391, THP1 371, NOMO1 361, SKM1 355, PL21 349,
+  WSUDLCL2 349 (B), HL60 40, JURKAT 31 (63 in Phase II), and no NK line at all. The ~20k sit in the densely
+  profiled core lines. So "prioritise PBMC" cannot mean "immune lines only" — that caps the expansion at a few
+  hundred. The design is two tiers: **immune** (nearest context, hundreds of compounds) and **core** (far
+  context, ~20k), the second admitted only with a measured transfer calibration, never by assumption.
+- **The 134-gene signature cannot be scored in L1000.** Only 4 of 66 classical-monocyte signature genes are
+  among the 978 landmarks; 51 are inferred from them. Scoring an interferon signature on inferred genes scores
+  L1000's imputation model. So the disease vector is rebuilt from the **landmark genes of the full DE table**
+  (`--de-dir studies/<study>/results`), measured on both sides; the signature route survives only as a tagged
+  fallback.
+
+Also fixed: OP3's `sm_lincs_id` is an LSM id, so BRD matching found 0 of 140 and name matching found only 15–19
+per line (it misses GLPG0634 / filgotinib). Matching is now on InChIKey connectivity block, as in `lupus_use.py`.
 
 | Step | Script | Cost | Gate |
 |---|---|---|---|
 | 1 | `fetch_lincs_meta.sh` | ~15 MB | — |
 | 2 | `lincs_triage.py` | minutes | ≥50 OP3 compounds in a line, ≥50 % of signature genes in L1000 |
-| 3 | `fetch_lincs_level5.sh phase2` (5.0 GB gz, ~5.8 GB) or `phase1` (20 GB gz, ~23 GB) | download | gctx opens with the three expected datasets |
-| 4 | `lincs_rescue.py` | minutes | Spearman vs OP3 in that population, CI above zero |
+| 3 | `fetch_lincs_level5.sh phase1` (20 GB gz, ~23 GB) — Phase II holds only 1,767 compounds, so Phase I is the one worth the disk | download | gctx opens with the three expected datasets |
+| 4 | `lincs_rescue.py --de-dir …` | minutes | Spearman vs OP3 in that population, CI above zero |
+
+Calibration bands are pre-registered: ≥50 shared OP3 compounds to act on a line, 20–49 report-only, below that no
+calibration is attempted.
 
 **Lineage proxies, by cell origin rather than a similarity score:** myeloid → THP1, HL60, U937, NOMO1, PL21 and
 related; CD4 T → JURKAT, CCRFCEM, MOLT4; B → RAJI, RAMOS and myeloma lines; NK → NK92, KHYG1, YT, which LINCS
