@@ -83,6 +83,19 @@ count donors two or three times.
 | D5.12 scProteomics "Broad immune activation…" | Kotliarov et al. 2020 *Nat Med* (doi:10.1038/s41591-020-0769-8). CITE-seq of 53,201 cells from **healthy influenza-vaccine responders**. The lupus link comes from separate SLE data. | **Contains no SLE cells** (**Known**). Not usable as SLE proteomics. |
 | Not in the notes | Nehar-Belaid et al. 2020 (GSE135779): childhood SLE PBMC, 33 SLE / 11 healthy, plus an adult validation set | **Recommended next study.** Independent cohort with both conditions; tests the `~ study + condition` design. |
 
+## Dataset expansion (planned 2026-11-05)
+
+Replicate first, pool later. Run with `scripts/run_expansion.sh`; nothing here has run on real data yet.
+
+| Order | Dataset | Role | Cell types | Status |
+|---|---|---|---|---|
+| 1 | Perez 2022 cohort 4, all cells (26 SLE / 22 healthy) | Discovery | Author labels | Code written |
+| 2 | GSE135779 children (33 SLE / 11 healthy) | Replication | Marker-based | Code written |
+| 3 | GSE135779 adults (7 SLE / 5 healthy on GEO; its summary says 8 / 6) | Replication | Marker-based | Code written |
+| Later | GSE254176 (6 SLE patients, controls from a separate atlas) | Not for DE: disease is confounded with source | | Unverified on GEO |
+
+**Pooling** with `~ study + condition` waits until single-cohort replication is read. **UCE** waits too: 408k cells would take about 5 days at the measured 0.93 cells/s (**Inferred**), and marker labels should be tested first. **Not done:** healthy-vs-healthy negative control; sex and treatment are not adjusted for because GEO lacks them.
+
 ## Current SLE therapeutics
 
 These are the positive-control candidates. Only small molecules can be scored by

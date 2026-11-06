@@ -30,3 +30,5 @@ pipeline/UCE/
 !studies/*/interim/uce/
 !studies/*/interim/uce/.gitkeep
 __pycache__/
+shared/gse135779/
+analysis/expansion_*/
