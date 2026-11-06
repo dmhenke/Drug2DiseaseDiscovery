@@ -102,6 +102,8 @@ TranSiGen or L1000.
 | Deucravacitinib | TYK2 inhibitor | Phase 3 in SLE ongoing; no phase 3 readout found (**Known**, 2026-11-01) | Yes |
 | JAK inhibitors (baricitinib, tofacitinib) | JAK1/2, JAK1/3 | Not approved for SLE; baricitinib's phase 3 program did not succeed (**Guess**, from memory) | Yes |
 
+Per-compound status with sources, used by every report page: `shared/compounds/lupus_use.tsv`.
+
 **Positive-control test (proposed):**
 - Hydroxychloroquine, dexamethasone or prednisolone, mycophenolic acid and
   deucravacitinib should score better at reversing the monocyte signature than

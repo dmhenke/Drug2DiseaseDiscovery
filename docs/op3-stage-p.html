@@ -192,15 +192,16 @@ because 140 compounds is not many; the top bin holds only 13.</figcaption>
 </table></div>
 
 <h2>The steroid test, in detail</h2>
-<p>Prednisolone induces TSC22D3 and FKBP5 through the glucocorticoid receptor &mdash; the most reliable
+<p>Prednisolone <span class='tag k' title="Glucocorticoid. On the US label for SLE; EULAR 2023 advises bridging use and minimising maintenance dose.">Current lupus use</span> induces TSC22D3 and FKBP5 through the glucocorticoid receptor &mdash; the most reliable
 pharmacology in this dataset, and the easiest thing a working model should recover. With every prednisolone
 row removed from training, mometasone furoate remains, a steroid 0.29 similar.</p>
 
 <div class="scroll"><table class="plain">
 <thead><tr><th>Training set</th><th>Gene</th><th class="num">Measured</th><th class="num">Ridge</th>
 <th class="num">Cell-type mean</th><th class="num">Nearest compound</th><th>Which compound</th></tr></thead>
-<tbody><tr><td>mometasone kept in training</td><td>TSC22D3</td><td class='num'>2.35</td><td class='num'>0.21</td><td class='num'>0.06</td><td class='num'>3.15</td><td>Mometasone Furoate <span class='muted'>(0.29)</span></td></tr><tr><td>mometasone kept in training</td><td>FKBP5</td><td class='num'>2.38</td><td class='num'>&minus;0.04</td><td class='num'>&minus;0.27</td><td class='num'>2.47</td><td>Mometasone Furoate <span class='muted'>(0.29)</span></td></tr><tr><td>no glucocorticoid in training</td><td>TSC22D3</td><td class='num'>2.35</td><td class='num'>&minus;0.00</td><td class='num'>0.04</td><td class='num'>&minus;0.74</td><td>Doxorubicin <span class='muted'>(0.17)</span></td></tr><tr><td>no glucocorticoid in training</td><td>FKBP5</td><td class='num'>2.38</td><td class='num'>&minus;0.27</td><td class='num'>&minus;0.29</td><td class='num'>0.24</td><td>Doxorubicin <span class='muted'>(0.17)</span></td></tr></tbody>
+<tbody><tr><td>mometasone kept in training</td><td>TSC22D3</td><td class='num'>2.35</td><td class='num'>0.21</td><td class='num'>0.06</td><td class='num'>3.15</td><td>Mometasone Furoate <span class='tag k' title="Drug-class evidence only: topical corticosteroids are the mainstay for localised cutaneous lupus. No study of this drug checked.">Current lupus use</span> <span class='muted'>(0.29)</span></td></tr><tr><td>mometasone kept in training</td><td>FKBP5</td><td class='num'>2.38</td><td class='num'>&minus;0.04</td><td class='num'>&minus;0.27</td><td class='num'>2.47</td><td>Mometasone Furoate <span class='tag k' title="Drug-class evidence only: topical corticosteroids are the mainstay for localised cutaneous lupus. No study of this drug checked.">Current lupus use</span> <span class='muted'>(0.29)</span></td></tr><tr><td>no glucocorticoid in training</td><td>TSC22D3</td><td class='num'>2.35</td><td class='num'>&minus;0.00</td><td class='num'>0.04</td><td class='num'>&minus;0.74</td><td>Doxorubicin <span class='muted'>(0.17)</span></td></tr><tr><td>no glucocorticoid in training</td><td>FKBP5</td><td class='num'>2.38</td><td class='num'>&minus;0.27</td><td class='num'>&minus;0.29</td><td class='num'>0.24</td><td>Doxorubicin <span class='muted'>(0.17)</span></td></tr></tbody>
 </table></div>
+<p class="muted">Lupus status for each compound is from <code>shared/compounds/lupus_use.tsv</code>, checked 2026-11-05. Mometasone's rests on evidence for topical corticosteroids as a class.</p>
 <p>The model predicts almost nothing. Looking up mometasone lands close to the measured value. With no
 steroid at all in training the lookup fails too, which is the honest limit of that method: it can only
 transfer from chemistry it has seen.</p>

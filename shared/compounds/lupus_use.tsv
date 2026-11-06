@@ -1,0 +1,23 @@
+name	block	status	basis	source	checked
+prednisolone	OIGNJSKKLXVSLS	current	Glucocorticoid. On the US label for SLE; EULAR 2023 advises bridging use and minimising maintenance dose.	PMID:37827694; drugs.com/pro/prednisolone-oral-solution.html	2026-11-05
+methylprednisolone	VHRSUDSXCMQTMA	current	Glucocorticoid. EULAR 2023 covers glucocorticoids as bridging therapy.	PMID:37827694	2026-11-05
+dexamethasone	UREBDLICKHMUKA	current	Glucocorticoid, drug-class evidence. ChEMBL lists phase 4 for SLE.	PMID:37827694; ChEMBL drug_indication	2026-11-05
+hydroxychloroquine	XXSMGPRMXLTPCZ	current	EULAR 2023 recommends it for all patients with lupus.	PMID:37827694	2026-11-05
+methotrexate	FBOZXECLQNJBKD	current	Immunosuppressant, off-label. Named in EULAR 2023.	PMID:37827694	2026-11-05
+mycophenolic acid	HPNSFSBZBAHARI	current	Active form of mycophenolate. Named in EULAR 2023.	PMID:37827694	2026-11-05
+azathioprine	LMEKQMALGUDUQG	current	Immunosuppressant. Named in EULAR 2023.	PMID:37827694	2026-11-05
+cyclophosphamide	CMSMOCZEIVJLDB	current	Named in EULAR 2023.	PMID:37827694	2026-11-05
+tacrolimus	KDEJOJSUWQBZSP	current	Calcineurin inhibitor. Named in EULAR 2023.	PMID:37827694	2026-11-05
+voclosporin	BICRTLVBTLFLRD	current	Calcineurin inhibitor. Named in EULAR 2023; two drugs newly approved for lupus nephritis prompted the KDIGO 2024 update.	PMID:37827694; PMID:38182286	2026-11-05
+sirolimus	QFJCIRLUMZQUOT	current	Off-label, small studies only. Not named in the EULAR 2023 abstract.	PMID:38351097	2026-11-05
+colchicine	IAKHMKGGTNLKSZ	current	For lupus pericarditis only, not lupus as a whole. Case series and a retrospective cohort; benefit unproven.	PMID:42922011; PMID:26163661	2026-11-05
+mometasone furoate	WOFMFGQZHJDGCX	current	Drug-class evidence only: topical corticosteroids are the mainstay for localised cutaneous lupus. No study of this drug checked.	PMID:27859683	2026-11-05
+diflorasone diacetate	BOBLHFUVNSFZPJ	current	Drug-class evidence only: topical corticosteroids are the mainstay for localised cutaneous lupus. No study of this drug checked.	PMID:27859683	2026-11-05
+vincristine	KUSGVVPSWLLOSB	historical	Past treatment for refractory lupus thrombocytopenia in a small series. Not named in the EULAR 2023 abstract. 'Historical' is inferred.	PMID:26203828	2026-11-05
+filgotinib	RIJLVEAXPNLDTC	trial_only	JAK1 inhibitor. ChEMBL lists phase 2 for lupus; not an established treatment.	ChEMBL drug_indication	2026-11-05
+ruxolitinib	HFNKQEVNSGCOJV	trial_only	JAK1/2 inhibitor. ChEMBL lists phase 2 for discoid lupus; not an established treatment.	ChEMBL drug_indication	2026-11-05
+baricitinib	XUZMWHLSFXCVMG	trial_only	JAK1/2 inhibitor. ChEMBL lists phase 3 for SLE; not an established treatment.	ChEMBL drug_indication	2026-11-05
+tofacitinib	UJLAWZDWDVHWOW	trial_only	JAK inhibitor. ChEMBL lists phase 1 for lupus; not an established treatment.	ChEMBL drug_indication	2026-11-05
+deucravacitinib	BZZKEPGENYLQSC	trial_only	TYK2 inhibitor. ChEMBL lists phase 2 for lupus; the project plan records phase 3 under way.	ChEMBL drug_indication	2026-11-05
+atorvastatin	XUKUURHRXDUEBC	trial_only	ChEMBL lists phase 3 for SLE. Not a treatment for lupus disease activity (inferred).	ChEMBL drug_indication	2026-11-05
+ixazomib	MXAYKZJJDUDWDS	trial_only	Proteasome inhibitor. ChEMBL lists phase 1 for lupus nephritis.	ChEMBL drug_indication	2026-11-05

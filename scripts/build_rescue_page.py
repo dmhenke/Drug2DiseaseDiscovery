@@ -19,6 +19,7 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).parent))
+from lupus_use import load as load_lupus, lookup as lupus_lookup  # noqa: E402
 from mol_fingerprints import fingerprints  # noqa: E402
 
 ROOT = Path(__file__).parent.parent
@@ -28,11 +29,10 @@ def seed_flags(smiles):
     """Which compounds are also in our seed table, matched on InChIKey connectivity."""
     seed = pd.read_csv(ROOT / "shared/compounds/seed_compounds.tsv", sep="\t").dropna(subset=["smiles"])
     _, seed_keys, _ = fingerprints(seed.smiles)
-    labels = {"positive_control": "lupus positive control", "l1000_hit": "L1000 reversal hit"}
     block = {}
     for k, src in zip(seed_keys, seed.source):
-        if k:
-            block.setdefault(k[:14], set()).add(labels.get(src, src))
+        if k and src == "l1000_hit":  # treatment status comes from lupus_use.tsv, not from this table
+            block.setdefault(k[:14], set()).add("L1000 reversal hit")
     _, keys, _ = fingerprints(smiles)
     return [", ".join(sorted(block.get(k[:14], []))) if k else "" for k in keys]
 
@@ -73,6 +73,9 @@ def main():
 
     rel, notes = relative_scores(genes)
     res = res.merge(rel, on=["population", "sm_name"], validate="one_to_one")
+    table = load_lupus()
+    use = {s: lupus_lookup(s, table) for s in res.SMILES.unique()}
+    res["lupus_use"] = res.SMILES.map(lambda s: use[s]["status"] if use[s] else "")
     res.to_csv(a.src / "rescue_scored.tsv", sep="\t", index=False, float_format="%.4f")
     comp = res.drop_duplicates("sm_name")[["sm_name", "SMILES"]]
     flags = dict(zip(comp.sm_name, seed_flags(comp.SMILES)))
@@ -87,7 +90,7 @@ def main():
                  hi=round(r.ci_hi, 3), q=round(r.q_bh, 4), n=int(r.genes_toward_healthy), m=int(r.genes_scored),
                  cos=round(r.reversal_cosine, 3), sp=None if pd.isna(r.specific_reversal) else round(r.specific_reversal, 3),
                  sr=None if pd.isna(r.specific_rank) else int(r.specific_rank), ra=round(r.size_vs_disease, 2),
-                 ba=bool(r.beats_average), off=round(r.off_target_rms, 3), f=flags[r.sm_name],
+                 ba=bool(r.beats_average), lu=use[r.SMILES], off=round(r.off_target_rms, 3), f=flags[r.sm_name],
                  t=drug[(r.population, r.sm_name)]) for r in res.itertuples()]
     payload = json.dumps(dict(pops=pops, rows=rows), separators=(",", ":")).replace("</", "<\\/")
     css = (ROOT / "docs/report.css").read_text().strip()
@@ -129,6 +132,8 @@ th button:focus-visible, .open:focus-visible, .dl:focus-visible { outline: 2px s
 .smiles { font: 0.78rem ui-monospace, Menlo, monospace; overflow-wrap: anywhere; color: var(--ink-2); }
 .flag { color: var(--ink-3); font-size: 0.8rem; display: block; font-weight: 400; }
 .warn { color: var(--guess); }
+.lu { display: block; width: fit-content; font-size: 0.74rem; font-weight: 600; border: 1px solid; border-radius: 4px; padding: 0 5px; margin-top: 3px; }
+.lu.current { color: var(--pass); } .lu.historical { color: var(--guess); } .lu.trial_only { color: var(--ink-2); border-style: dashed; }
 </style>
 </head>
 <body>
@@ -147,6 +152,7 @@ th button:focus-visible, .open:focus-visible, .dl:focus-visible { outline: 2px s
 <div><label for="gene">Moves this gene toward healthy</label><input id="gene" type="search" list="genelist" placeholder="e.g. IFI44L"><datalist id="genelist"></datalist></div>
 <div><label for="min">Minimum match to healthy</label><input id="min" type="number" step="0.05" min="-5" max="1" placeholder="any"></div>
 <div><label for="off">Maximum off-target effect</label><input id="off" type="number" step="0.05" min="0" placeholder="any"></div>
+<div><label for="use">Lupus treatment status</label><select id="use"><option value="">All compounds</option><option value="used">Current or historical use</option><option value="current">Current use</option><option value="historical">Historical use</option><option value="trial_only">Lupus trials only</option><option value="none">No known lupus use</option></select></div>
 <label class="check"><input id="sig" type="checkbox"> Beats the average compound only</label>
 </div>
 <p id="thin" class="warn" hidden></p>
@@ -158,6 +164,7 @@ th button:focus-visible, .open:focus-visible, .dl:focus-visible { outline: 2px s
 <li><b>Specific reversal</b> runs from &minus;1 to 1. It is the alignment with the opposite of the disease signature after removing the median compound's effect, with the compound's rank beside it. It ignores effect size. It was added after seeing the first results, so it is exploratory.</li>
 <li><b>Size vs disease</b> is the drug's effect on the signature genes divided by the signature's own size. Above 1, the drug moves these genes more than the disease does and match to healthy starts to penalise it.</li>
 <li><b>Off-target</b> is the root-mean-square log<sub>2</sub> change on genes outside the signature. A high value next to a good match can mean a broadly disruptive or toxic compound rather than a specific one.</li>
+<li><b>Lupus treatment status</b> comes from guidelines, the US label, PubMed and ChEMBL, checked 2026-11-05. &ldquo;Current&rdquo; includes off-label use and, where the note says so, evidence for the drug class or for one manifestation only. &ldquo;Trials only&rdquo; is not an established treatment. No marker means none was found in this check, not that the drug was never used. Open a row for the basis and source.</li>
 <li><b>Evidence</b> is &ldquo;measured&rdquo; for every row: OP3 profiled the compound. Structure-based predictions are not shown, because the <a href="op3-stage-p.html">Stage P model</a> failed its test.</li>
 </ul>
 <footer>Diagnostic tool, not a result for publication and not treatment guidance. Drug data: OP3, Szalata et al., NeurIPS 2024 Datasets and Benchmarks (GSE279945), CC BY 4.0. Disease data: Perez 2022 cohort 4, 20 vs 20 donors.</footer>
@@ -171,6 +178,10 @@ const COLS = [["c","Compound"],["g","Match to healthy"],["n","Genes toward healt
 let sort = {k: "g", dir: -1}, open = null, shown = [];
 for (const p of Object.keys(D.pops)) $("pop").add(new Option(`${p} (${D.pops[p].genes.length} genes)`, p));
 function geneIndex() { return D.pops[$("pop").value].genes.findIndex(g => g.toUpperCase() === $("gene").value.trim().toUpperCase()); }
+function useMatch(r) { const u = $("use").value, s = r.lu ? r.lu.status : "none";
+  return !u || (u === "used" ? s === "current" || s === "historical" : s === u); }
+const srcHtml = t => t.split("; ").map(x => x.startsWith("PMID:") ? `<a href="https://pubmed.ncbi.nlm.nih.gov/${esc(x.slice(5))}/">${esc(x)}</a>`
+  : x.startsWith("drugs.com") ? `<a href="https://www.${esc(x)}">US label</a>` : esc(x)).join("; ");
 function render() {
   const pop = $("pop").value, P = D.pops[pop], name = $("name").value.trim().toLowerCase(), gi = geneIndex();
   const typed = $("gene").value.trim(), min = parseFloat($("min").value), off = parseFloat($("off").value);
@@ -180,7 +191,7 @@ function render() {
   const missing = typed && gi < 0 ? `${typed} is not in the ${pop} signature, so the gene filter is not applied. ` : "";
   $("thin").textContent = thin + missing; $("thin").hidden = !(thin + missing);
   shown = D.rows.filter(r => r.p === pop && (!name || r.c.toLowerCase().includes(name))
-    && (isNaN(min) || r.g >= min) && (isNaN(off) || r.off <= off) && (!$("sig").checked || r.ba)
+    && (isNaN(min) || r.g >= min) && (isNaN(off) || r.off <= off) && (!$("sig").checked || r.ba) && useMatch(r)
     && (gi < 0 || Math.abs(P.d[gi] + r.t[gi]) < Math.abs(P.d[gi])));
   shown.sort((a, b) => (typeof a[sort.k] === "string" ? a[sort.k].localeCompare(b[sort.k]) : (a[sort.k] ?? -Infinity) - (b[sort.k] ?? -Infinity)) * sort.dir);
   $("head").innerHTML = COLS.map(([k, l]) => `<th aria-sort="${sort.k === k ? (sort.dir > 0 ? "ascending" : "descending") : "none"}" class="${k === "c" || k === "e" ? "" : "num"}"><button data-k="${k}">${l}${sort.k === k ? (sort.dir > 0 ? " ▲" : " ▼") : ""}</button></th>`).join("");
@@ -191,12 +202,13 @@ function row(r) {
   const c = Math.max(-1, Math.min(1, r.g)), w = Math.abs(c) * 50;
   const bar = `<div class="bar" aria-hidden="true"><i style="left:${c < 0 ? 50 - w : 50}%;width:${w}%;background:var(${c < 0 ? "--bar-2" : "--bar"})"></i></div>`;
   const key = r.p + "|" + r.c;
-  let h = `<tr><td><button class="open" data-key="${esc(key)}" aria-expanded="${open === key}">${esc(r.c)}</button>${r.f ? `<span class="flag">${esc(r.f)}</span>` : ""}</td>
+  let h = `<tr><td><button class="open" data-key="${esc(key)}" aria-expanded="${open === key}">${esc(r.c)}</button>${r.lu ? `<span class="lu ${esc(r.lu.status)}" title="${esc(r.lu.basis)}">${esc(r.lu.label)}</span>` : ""}${r.f ? `<span class="flag">${esc(r.f)}</span>` : ""}</td>
   <td class="num">${num(r.g)} <span class="muted">(${num(r.lo, 2)} to ${num(r.hi, 2)})</span>${bar}</td><td class="num">${r.n} / ${r.m}</td><td class="num">${r.sp === null ? "n/a" : `${num(r.sp, 2)} <span class="muted">(#${r.sr})</span>`}</td><td class="num">${r.ra.toFixed(2)}</td><td class="num">${r.off.toFixed(2)}</td><td>${esc(r.e)}</td></tr>`;
   if (open === key) {
     const P = D.pops[r.p], items = P.genes.map((g, i) => ({g, d: P.d[i], a: P.d[i] + r.t[i]})).sort((x, y) => (Math.abs(x.a) - Math.abs(x.d)) - (Math.abs(y.a) - Math.abs(y.d)));
     h += `<tr class="detail"><td colspan="7"><b>SLE vs healthy log<sub>2</sub> change, before &rarr; after adding the drug.</b> Closer to 0 is closer to healthy. Most improved first.
     <div class="genes">${items.map(x => `<span>${esc(x.g)}: ${num(x.d, 2)} &rarr; ${num(x.a, 2)}${Math.abs(x.a) < Math.abs(x.d) ? "" : " <span class='warn'>(worse)</span>"}</span>`).join("")}</div>
+    ${r.lu ? `<p style="margin:8px 0"><b>${esc(r.lu.label)}.</b> ${esc(r.lu.basis)} Source: ${srcHtml(r.lu.source)}</p>` : ""}
     <div class="smiles">SMILES: ${esc(r.s)}</div></td></tr>`;
   }
   return h;
@@ -204,11 +216,11 @@ function row(r) {
 $("head").addEventListener("click", e => { const k = e.target.closest("button")?.dataset.k; if (!k) return;
   sort = sort.k === k ? {k, dir: -sort.dir} : {k, dir: k === "c" || k === "e" || k === "off" || k === "ra" ? 1 : -1}; render(); });
 $("body").addEventListener("click", e => { const b = e.target.closest(".open"); if (!b) return; open = open === b.dataset.key ? null : b.dataset.key; render(); });
-for (const id of ["pop","name","gene","min","off","sig"]) { $(id).addEventListener("input", () => { if (id === "pop") { $("gene").value = ""; open = null; } render(); }); }
+for (const id of ["pop","name","gene","min","off","use","sig"]) { $(id).addEventListener("input", () => { if (id === "pop") { $("gene").value = ""; open = null; } render(); }); }
 $("dl").addEventListener("click", () => {
-  const head = "population,compound,match_to_healthy,ci_lo,ci_hi,genes_toward_healthy,genes_scored,reversal_cosine,specific_reversal,specific_rank,size_vs_disease,beats_average,off_target,evidence,smiles";
+  const head = "population,compound,match_to_healthy,ci_lo,ci_hi,genes_toward_healthy,genes_scored,reversal_cosine,specific_reversal,specific_rank,size_vs_disease,beats_average,off_target,evidence,lupus_use,smiles";
   const q = v => { const s = String(v); return /^[=+\-@\t\r]/.test(s) && isNaN(Number(s)) ? `"'${s.replace(/"/g, '""')}"` : `"${s.replace(/"/g, '""')}"`; };
-  const body = shown.map(r => [r.p, r.c, r.g, r.lo, r.hi, r.n, r.m, r.cos, r.sp ?? "", r.sr ?? "", r.ra, r.ba, r.off, r.e, r.s].map(q).join(","));
+  const body = shown.map(r => [r.p, r.c, r.g, r.lo, r.hi, r.n, r.m, r.cos, r.sp ?? "", r.sr ?? "", r.ra, r.ba, r.off, r.e, r.lu ? r.lu.status : "", r.s].map(q).join(","));
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([[head, ...body].join("\n")], {type: "text/csv"}));
   a.download = "chemical_rescue_filtered.csv"; a.click(); URL.revokeObjectURL(a.href);
 });

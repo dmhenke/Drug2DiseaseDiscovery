@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).parent))
+from lupus_use import load as load_lupus, lookup as lupus_lookup  # noqa: E402
 from mol_fingerprints import fingerprints  # noqa: E402
 
 ROOT = Path(__file__).parent.parent
@@ -187,13 +188,20 @@ def main():
                       for n, c in series.items())
 
     # --- prednisolone ---------------------------------------------------------
+    lupus = load_lupus()
+    smiles = dict(zip(comps.sm_name, comps.SMILES))
+
+    def mark(name):
+        u = lupus_lookup(smiles[name], lupus) if name in smiles else None
+        return f" <span class='tag {'k' if u['status'] == 'current' else 'g'}' title=\"{u['basis']}\">{u['label']}</span>" if u else ""
+
     pred_rows = []
     for _, r in L["pred"].iterrows():
         label = ("mometasone kept in training" if r.training == "mometasone_in_training" else "no glucocorticoid in training")
         pred_rows.append(f"<tr><td>{label}</td><td>{r.gene}</td><td class='num'>{f(r.measured, 2)}</td>"
                          f"<td class='num'>{f(r.ridge, 2)}</td><td class='num'>{f(r.cell_type_mean, 2)}</td>"
                          f"<td class='num'>{f(r.nearest_compound, 2)}</td>"
-                         f"<td>{r.nearest_name} <span class='muted'>({r.tanimoto:.2f})</span></td></tr>")
+                         f"<td>{r.nearest_name}{mark(r.nearest_name)} <span class='muted'>({r.tanimoto:.2f})</span></td></tr>")
 
     # --- official split -------------------------------------------------------
     off_rows = []
@@ -307,7 +315,7 @@ because {len(byc)} compounds is not many; the top bin holds only {bins[-1][1]}.<
 </table></div>
 
 <h2>The steroid test, in detail</h2>
-<p>Prednisolone induces TSC22D3 and FKBP5 through the glucocorticoid receptor &mdash; the most reliable
+<p>Prednisolone{mark('Prednisolone')} induces TSC22D3 and FKBP5 through the glucocorticoid receptor &mdash; the most reliable
 pharmacology in this dataset, and the easiest thing a working model should recover. With every prednisolone
 row removed from training, mometasone furoate remains, a steroid {L['pred'].tanimoto.max():.2f} similar.</p>
 
@@ -316,6 +324,7 @@ row removed from training, mometasone furoate remains, a steroid {L['pred'].tani
 <th class="num">Cell-type mean</th><th class="num">Nearest compound</th><th>Which compound</th></tr></thead>
 <tbody>{''.join(pred_rows)}</tbody>
 </table></div>
+<p class="muted">Lupus status for each compound is from <code>shared/compounds/lupus_use.tsv</code>, checked 2026-11-05. Mometasone's rests on evidence for topical corticosteroids as a class.</p>
 <p>The model predicts almost nothing. Looking up mometasone lands close to the measured value. With no
 steroid at all in training the lookup fails too, which is the honest limit of that method: it can only
 transfer from chemistry it has seen.</p>
