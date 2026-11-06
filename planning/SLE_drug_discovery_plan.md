@@ -131,6 +131,18 @@ reshaped the plan:
 Also fixed: OP3's `sm_lincs_id` is an LSM id, so BRD matching found 0 of 140 and name matching found only 15–19
 per line (it misses GLPG0634 / filgotinib). Matching is now on InChIKey connectivity block, as in `lupus_use.py`.
 
+**Triage with that matching in place (node, 2026-11-06):** 18 core lines clear the ≥50-compound calibration band
+and the largest adds **15,540 compounds**, a ~110× expansion of the drug axis. Every immune line falls in the
+20–49 report-only band (THP1, U937, NOMO1, SKM1, PL21, WSUDLCL2) — InChIKey matching raised them above name
+matching but not to the acting bar, so **no haematopoietic line can be calibrated against OP3**. Landmark
+fractions of the signature confirm the gene problem: 6 % classical mono, 3 % non-classical, 22 % NK, 18 % CD4 T.
+
+Because the immune lines cannot be calibrated but do share hundreds of compounds with the core lines,
+`lincs_rescue.py` adds an **immune-vs-core agreement control** (`context_agreement.tsv`): if a monocytic line and
+a melanoma line rank the shared compounds alike, the cell context costs little for this signature; if they
+disagree, a passing OP3 calibration on a core line deserves suspicion. It compares two proxies, so it is
+evidence about context sensitivity, not about real monocytes.
+
 | Step | Script | Cost | Gate |
 |---|---|---|---|
 | 1 | `fetch_lincs_meta.sh` | ~15 MB | — |

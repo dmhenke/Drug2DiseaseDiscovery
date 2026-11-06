@@ -140,6 +140,35 @@ def interval(x, y, rng):
     return float(np.nanpercentile(v, 2.5)), float(np.nanpercentile(v, 97.5))
 
 
+def context_agreement(res, rng):
+    """Do an immune line and a core line rank the same compounds the same way?
+
+    The immune lines share only 20-49 compounds with OP3 (measured 2026-11-06), too few to calibrate, but they
+    share hundreds with the core lines. If a monocytic line and a melanoma line agree on those, the cell context
+    costs little for this signature and the core expansion is on firmer ground than its OP3 interval alone shows;
+    if they disagree, the context matters and a passing OP3 calibration on a core line deserves suspicion.
+    This is an internal control between proxies, not evidence about real monocytes.
+    """
+    out = []
+    if res.empty:
+        return pd.DataFrame()
+    for pop, g in res.groupby("population", sort=False):
+        W = g.pivot_table(index="sm_name", columns="cell_line", values="specific_reversal", aggfunc="first")
+        tier_of = g.drop_duplicates("cell_line").set_index("cell_line").tier
+        for imm in [c for c in W if tier_of.get(c) == "immune"]:
+            for core in [c for c in W if tier_of.get(c) == "core"]:
+                k = W[[imm, core]].dropna()
+                if len(k) >= 30:
+                    x, y = k[imm].to_numpy(), k[core].to_numpy()
+                    lo, hi = interval(x, y, rng)
+                    out.append(dict(population=pop, immune_line=imm, core_line=core, shared_compounds=len(k),
+                                    spearman=round(float(spearmanr(x, y).statistic), 3),
+                                    ci_lo=round(lo, 3), ci_hi=round(hi, 3),
+                                    reading="context costs little" if lo > 0.5 else
+                                            "partial agreement" if lo > 0 else "lines disagree; context matters"))
+    return pd.DataFrame(out)
+
+
 def pert_blocks(meta):
     out = {}
     for f in ("GSE92742_Broad_LINCS_pert_info.txt.gz", "GSE70138_Broad_LINCS_pert_info_2017-03-06.txt.gz"):
@@ -261,6 +290,8 @@ def main():
     cal = pd.DataFrame(calib)
     res.to_csv(a.out / "lincs_rescue.tsv", sep="\t", index=False, float_format="%.4f")
     cal.to_csv(a.out / "calibration.tsv", sep="\t", index=False)
+    ctx = context_agreement(res, rng)
+    ctx.to_csv(a.out / "context_agreement.tsv", sep="\t", index=False)
     passed = cal[cal.note.astype(str).eq("transfers")] if len(cal) else cal
     out = [f"LINCS {a.phase}: scored {0 if res.empty else res.sm_name.nunique()} distinct compounds across "
            f"{0 if res.empty else res.cell_line.nunique()} cell line(s); OP3 contributes 140 in real PBMCs.",
@@ -269,6 +300,9 @@ def main():
     for _, r in cal.iterrows():
         out.append(f"  [{'ok' if r.get('note') == 'transfers' else 'FAIL'}] {r.get('tier')} {r.cell_line} -> "
                    f"{r.population}: {r.get('note')}")
+    if len(ctx):
+        out += ["Immune line vs core line on the compounds they share (internal control, not evidence about real "
+                "monocytes):", ctx.to_string(index=False), ""]
     usable = 0 if res.empty or passed.empty else res.merge(
         passed[["cell_line", "population"]], on=["cell_line", "population"]).sm_name.nunique()
     out += ["", f"Usable expansion: {len(passed)} line-population pair(s), {usable} distinct compounds whose ranking "
