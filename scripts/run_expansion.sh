@@ -5,7 +5,7 @@
 #   3 replication tables and a consensus signature; compounds rescored on it if OP3 is present
 # PCA stand-in throughout: with labels set, the DE does not depend on the embedding, and no GPU is needed.
 # A failed step is logged and the rest still run. Finished studies are skipped; set FORCE=1 to redo them.
-# Usage: scripts/run_expansion.sh     Env: SRC (Perez h5ad), FORCE
+# Usage: scripts/run_expansion.sh     Env: SRC (Perez h5ad), FORCE, DISCOVERY_ONLY=1 (step 1 only)
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"; cd "$ROOT"
 SRC="${SRC:-$ROOT/data/cellxgene/perez_pbmc.h5ad}"
@@ -48,6 +48,8 @@ main() {
     fi
     run_de lupus_c4_full || fail "lupus_c4_full DE"
   fi
+
+  if [ -n "${DISCOVERY_ONLY:-}" ]; then echo "DISCOVERY_ONLY: stopping after step 1"; echo "FAILED STEPS:${FAILED:- none}"; return; fi
 
   step "2a marker annotation against author labels (20 v 20 test subset)"
   if [ -f studies/lupus_test/data/lupus_c4.h5ad ]; then

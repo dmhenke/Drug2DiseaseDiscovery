@@ -1,36 +1,30 @@
 #!/usr/bin/env python
-"""Score every LINCS compound in a cell line for how specifically it reverses the SLE signature, and measure
-what the cell line costs by comparing the OP3 compounds it shares with real PBMCs.
+"""Can LINCS compounds measured in cell lines be ranked for SLE reversal in PBMC populations?
 
-This widens the compound axis with measurements, not predictions: scripts/op3_nn_rescue_check.py showed that
-predicting an unmeasured compound's profile from structure recovers measured rescue rank at Spearman 0.05-0.33,
-so imputed rows would be noise that renders like data.
+For each line and population, on one gene set: L1000 landmarks (measured, not inferred) that OP3 also holds and
+that reach padj < 0.05 in the full SLE DE, ribosomal and mitochondrial genes removed.
+  spec = -((t - m) . d) / (|t - m| |d|)   t = compound profile, m = median compound in that context, d = SLE log2FC
+Scale-free, because L1000 z-scores and OP3 log2FC are different units. OP3 is rescored here from its h5ad on the
+same genes, so the two sides of the calibration are like for like.
 
-Two things the triage forced (2026-11-06):
-  * The disease vector is built from the **L1000 landmark genes of the full DE**, not from the 134-gene SLE
-    signature: only 4 of 66 classical-monocyte signature genes are landmarks, so the signature version would
-    score genes L1000 infers from the 978 landmarks with a linear model, i.e. score the model. Landmark genes
-    with padj<0.05 are primary where at least MIN_SIG of them qualify; `genes_basis` records what was used.
-  * Immune lines hold only a few hundred compounds each, so the core lines (far context, ~20k compounds) are
-    scored too, and the calibration against OP3 is what decides whether their ranking means anything.
+GATE: one-sided Spearman of line score vs OP3 score over shared compounds (InChIKey block), BH across every pair
+with at least MIN_ACT compounds; q < 0.05 passes. 20 to 49 shared compounds is report-only, below 20 is not tested.
+A pass means this line orders those shared compounds like PBMCs do. It does not validate any one unshared compound.
+No DE table means no score: there is no fallback to the signature genes, which L1000 mostly infers.
 
-  spec = -((t - m) . d) / (|t - m| |d|)   t = compound z-scores, m = median compound in that line, d = SLE log2FC
-Scale-free on purpose: L1000 z-scores and OP3 log2FC are different units, so OP3's match-to-healthy value is not
-comparable and is not computed for these rows. Compounds are matched to OP3 on InChIKey connectivity block.
+Expectation, written before the first valid run: one OP3 cell type predicts another at about 0.30, so that is a
+ceiling. Monocytic lines should sit below it and non-immune lines at or near zero. Passes confined to one population
+or a negative correlation would point to artefact. Known mismatches: OP3 is 1 uM, most L1000 signatures are higher
+and doses are pooled by median; the scoring assumes disease and drug effects add.
 
-CALIBRATION GATE: Spearman between the line's score and the OP3 PBMC score over shared compounds, with a
-compound-resampled CI. CI through zero means the line does not transfer to that population; its compounds keep
-their evidence tag and are not ranked beside OP3's. Recorded either way.
-
-Expectation, written before the run: the ~0.30 that one OP3 cell type reaches for another is the ceiling; a
-monocytic leukaemia line should be below it, and a melanoma line lower still or at zero. An interferon signature
-may transfer especially badly to a line with a disrupted interferon pathway.
-
-Usage: python scripts/lincs_rescue.py <level5.gctx> shared/lincs/meta analysis/lincs_rescue \
-           --phase GSE92742 --de-dir studies/lupus_test/results --lines THP1 U937 NOMO1 SKM1 PL21 JURKAT MCF7 PC3
-       python scripts/lincs_rescue.py --self-check
+Usage: python scripts/lincs_rescue.py <level5.gctx> shared/lincs/meta outdir --de studies/<study>/results/DE_all_human.csv \
+           --op3 shared/perturbation/op3 --phase GSE92742 [--time 24] [--lines ...] [--seed 0]
+Test:  python scripts/test_lincs_rescue.py
 """
 import argparse
+import re
+import socket
+import subprocess
 import sys
 from pathlib import Path
 
@@ -40,19 +34,22 @@ import pandas as pd
 from scipy.stats import spearmanr
 
 sys.path.insert(0, str(Path(__file__).parent))
-from lincs_triage import ALL_POPS, CORE, PROXY, col, norm, read  # noqa: E402
+from compare_cohorts import POPULATIONS  # noqa: E402
+from lincs_triage import CORE, PROXY, col, norm, pert_blocks, read  # noqa: E402
 from lupus_use import block  # noqa: E402
+from op3_rescue import bh, load  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
-BOOTS, CHUNK, MIN_SIG, MIN_OVERLAP = 2000, 2000, 20, 10
+BOOTS, CHUNK, MIN_SIG, MIN_REPORT, MIN_ACT = 2000, 2000, 20, 20, 50  # MIN_REPORT, MIN_ACT as in lincs_triage
+RIBO = re.compile(r"^(RPL|RPS|MT-)")
+CONTROLS = re.compile("ruxolitinib|filgotinib|tofacitinib|baricitinib|prednisolone|dexamethasone|"
+                      "hydroxychloroquine|methotrexate|mycophenol", re.I)
 SIG_FILES = {"GSE92742": ("GSE92742_Broad_LINCS_sig_info.txt.gz", "GSE92742_Broad_LINCS_gene_info.txt.gz"),
              "GSE70138": ("GSE70138_Broad_LINCS_sig_info_2017-03-06.txt.gz",
                           "GSE70138_Broad_LINCS_gene_info_2017-03-06.txt.gz")}
-# The full DE file per population, as scripts/run_study.sh writes it (see scripts/l1000_reversal.py).
-DE_FILES = {"Classical mono": "DE_human_classical_monocyte.csv",
-            "Non-classical mono": "DE_human_non-classical_monocyte.csv",
-            "NK": "DE_human_natural_killer_cell.csv",
-            "CD4 T": "DE_human_CD4-positive,_alpha-beta_T_cell.csv"}
+PERT_FILES = ["GSE92742_Broad_LINCS_pert_info.txt.gz", "GSE70138_Broad_LINCS_pert_info_2017-03-06.txt.gz"]
+DEFAULT_LINES = ["THP1", "U937", "NOMO1", "SKM1", "PL21", "JURKAT", "WSUDLCL2", "MCF7", "PC3", "A375", "A549",
+                 "HA1E", "HT29", "VCAP", "HCC515", "HEPG2", "NPC"]
 
 
 def spec(T, m, d):
@@ -64,74 +61,49 @@ def spec(T, m, d):
 
 
 def gctx_slice(path, col_ids, row_ids):
-    """Columns for the wanted signatures, rows for the wanted genes. Orientation is detected, not assumed."""
+    """Signatures by genes. A gctx stores (cols, rows); orientation is checked against the ids."""
     with h5py.File(path, "r") as f:
         decode = lambda k: np.array([x.decode() if isinstance(x, bytes) else str(x) for x in f[k][:]])  # noqa: E731
         rid, cid, M = decode("0/META/ROW/id"), decode("0/META/COL/id"), f["0/DATA/0/matrix"]
-        assert set(M.shape) == {len(rid), len(cid)} or len(rid) == len(cid), \
-            f"matrix {M.shape} matches neither {len(rid)} rows nor {len(cid)} cols"
-        transposed = M.shape[0] == len(cid) and M.shape[1] == len(rid)  # gctx stores (cols, rows)
+        assert M.shape == (len(cid), len(rid)), f"matrix {M.shape} is not ({len(cid)} cols, {len(rid)} rows)"
         rpos = pd.Series(np.arange(len(rid)), rid).reindex(row_ids).dropna().astype(int)
         cpos = pd.Series(np.arange(len(cid)), cid).reindex(col_ids).dropna().astype(int)
         assert len(rpos) and len(cpos), "no requested gene or signature id is in this matrix"
         gi, ci = np.sort(rpos.to_numpy()), cpos.to_numpy()
-        out = np.empty((len(cpos), len(gi)), dtype=np.float32)
+        out = np.empty((len(ci), len(gi)), dtype=np.float32)
         for s in range(0, len(ci), CHUNK):
             blk = ci[s:s + CHUNK]
             order = np.argsort(blk)
-            part = M[blk[order], :][:, gi] if transposed else M[gi, :][:, blk[order]].T
-            out[np.arange(s, s + len(blk))[order]] = part
-        return pd.DataFrame(out, index=cpos.index, columns=pd.Series(rid[gi]).to_list())
+            out[np.arange(s, s + len(blk))[order]] = M[blk[order], :][:, gi]
+        return pd.DataFrame(out, index=cpos.index, columns=rid[gi])
 
 
-def disease_vectors(de_dir, landmarks):
-    """Per population, the disease direction over L1000 landmark genes, from the full DE table.
+def disease_vectors(path, allowed):
+    """{population: Series of log2FC by gene} from the full DE, and one review row per population."""
+    de = pd.read_csv(path).dropna(subset=["log2FoldChange", "padj"])
+    out, rows = {}, []
+    for cell, (pop, op3_cell) in POPULATIONS.items():
+        g = de[(de.cell_type == cell) & de.gene.isin(allowed) & ~de.gene.str.match(RIBO)].drop_duplicates("gene")
+        s = g[g.padj < 0.05].set_index("gene").log2FoldChange
+        rows.append(dict(population=pop, op3_cell_type=op3_cell, landmark_genes_tested=len(g), genes_padj05=len(s)))
+        if len(s) >= MIN_SIG:
+            out[pop] = s
+    return out, pd.DataFrame(rows)
 
-    Returns {population: {"basis": label, "d": Series by gene symbol}}. Falls back to the 134-gene signature
-    only when the DE table is absent, and says so in the label.
-    """
+
+def op3_scores(obs, Y, genes, vectors):
+    """OP3 measured scores per population on that population's gene set, keyed by InChIKey block."""
+    col_of = {g: i for i, g in enumerate(genes)}
+    blk = {s: block(s) for s in obs.SMILES.unique()}
+    op3_cell = dict(POPULATIONS.values())
     out = {}
-    sig = pd.read_csv(ROOT / "analysis/sle_signatures/signatures.tsv", sep="\t")
-    for pop, f in DE_FILES.items():
-        p = Path(de_dir) / f if de_dir else None
-        if p and p.exists():
-            d = pd.read_csv(p).dropna(subset=["log2FoldChange"])
-            gcol = col(d, "gene", "symbol", "gene_name")
-            d = d[d[gcol].isin(landmarks)].drop_duplicates(gcol).set_index(gcol)
-            s = d[d.padj < 0.05].log2FoldChange if "padj" in d else d.log2FoldChange
-            if len(s) >= MIN_SIG:
-                out[pop] = dict(basis=f"landmark_padj05 ({len(s)} of {len(d)} DE landmarks)", d=s)
-            elif len(d):
-                out[pop] = dict(basis=f"landmark_all ({len(d)} genes; only {len(s)} reached padj<0.05)",
-                                d=d.log2FoldChange)
-        if pop not in out:
-            s = sig[sig.population == pop].set_index("gene").log2fc_sle_vs_healthy
-            n_lm = int(s.index.isin(landmarks).sum())
-            out[pop] = dict(d=s, basis=(f"signature_FALLBACK ({n_lm} of {len(s)} signature genes are landmarks; "
-                                        "DE table absent, so most genes scored are L1000-inferred)"
-                                        if n_lm < 0.5 * len(s) else f"signature ({n_lm} landmark genes)"))
+    for pop, d in vectors.items():
+        rows = np.flatnonzero(obs.cell_type == op3_cell[pop])
+        T = Y[rows][:, d.index.map(col_of).to_numpy()]
+        sc = spec(T, np.median(T, 0), d.to_numpy())
+        s = pd.Series(sc, obs.SMILES.to_numpy()[rows].astype(object)).rename(index=blk).dropna()
+        out[pop] = s.groupby(level=0).mean()
     return out
-
-
-def op3_scores(vectors):
-    """OP3 measured scores on the same gene basis where it overlaps OP3's genes, keyed by InChIKey block."""
-    g = pd.read_csv(ROOT / "analysis/op3_rescue/rescue_genes.tsv", sep="\t")
-    smi = pd.read_csv(ROOT / "analysis/op3_rescue/rescue.tsv", sep="\t").drop_duplicates("sm_name")
-    blk = {n: block(s) for n, s in zip(smi.sm_name, smi.SMILES)}
-    out, basis = {}, {}
-    for pop, s in g.groupby("population", sort=False):
-        T = s.pivot(index="sm_name", columns="gene", values="drug")
-        d = vectors[pop]["d"].reindex(T.columns).dropna()
-        if len(d) < MIN_OVERLAP:  # OP3 kept 5,317 genes; the landmark basis may barely overlap this signature
-            d = s.drop_duplicates("gene").set_index("gene").disease[T.columns]
-            basis[pop] = f"op3 scored on its own signature genes ({len(d)}): landmark basis overlapped too few"
-        else:
-            basis[pop] = f"op3 scored on {len(d)} shared basis genes"
-        X = T[d.index].to_numpy()
-        sc = pd.Series(spec(X, np.median(X, 0), d.to_numpy()), T.index)
-        o = pd.Series(sc.to_numpy(), [blk.get(n) for n in sc.index]).dropna()
-        out[pop] = o[~o.index.duplicated()]
-    return out, basis
 
 
 def interval(x, y, rng):
@@ -141,181 +113,138 @@ def interval(x, y, rng):
 
 
 def context_agreement(res, rng):
-    """Do an immune line and a core line rank the same compounds the same way?
-
-    The immune lines share only 20-49 compounds with OP3 (measured 2026-11-06), too few to calibrate, but they
-    share hundreds with the core lines. If a monocytic line and a melanoma line agree on those, the cell context
-    costs little for this signature and the core expansion is on firmer ground than its OP3 interval alone shows;
-    if they disagree, the context matters and a passing OP3 calibration on a core line deserves suspicion.
-    This is an internal control between proxies, not evidence about real monocytes.
-    """
+    """Do an immune line and a non-immune line rank shared compounds alike? Compares two proxies, not real cells."""
     out = []
     if res.empty:
         return pd.DataFrame()
     for pop, g in res.groupby("population", sort=False):
         W = g.pivot_table(index="sm_name", columns="cell_line", values="specific_reversal", aggfunc="first")
         tier_of = g.drop_duplicates("cell_line").set_index("cell_line").tier
-        for imm in [c for c in W if tier_of.get(c) == "immune"]:
-            for core in [c for c in W if tier_of.get(c) == "core"]:
+        for imm in [c for c in W if tier_of[c] == "immune"]:
+            for core in [c for c in W if tier_of[c] == "core"]:
                 k = W[[imm, core]].dropna()
                 if len(k) >= 30:
-                    x, y = k[imm].to_numpy(), k[core].to_numpy()
-                    lo, hi = interval(x, y, rng)
+                    lo, hi = interval(k[imm].to_numpy(), k[core].to_numpy(), rng)
                     out.append(dict(population=pop, immune_line=imm, core_line=core, shared_compounds=len(k),
-                                    spearman=round(float(spearmanr(x, y).statistic), 3),
-                                    ci_lo=round(lo, 3), ci_hi=round(hi, 3),
-                                    reading="context costs little" if lo > 0.5 else
-                                            "partial agreement" if lo > 0 else "lines disagree; context matters"))
+                                    spearman=round(float(spearmanr(k[imm], k[core]).statistic), 3),
+                                    ci_lo=round(lo, 3), ci_hi=round(hi, 3)))
     return pd.DataFrame(out)
 
 
-def pert_blocks(meta):
-    out = {}
-    for f in ("GSE92742_Broad_LINCS_pert_info.txt.gz", "GSE70138_Broad_LINCS_pert_info_2017-03-06.txt.gz"):
-        if not (meta / f).exists():
-            continue
-        pi = read(meta / f)
-        smi, key = col(pi, "canonical_smiles", "smiles"), col(pi, "inchi_key_prefix", "inchi_key")
-        for pid, s, k in zip(pi.pert_id, pi[smi] if smi else [None] * len(pi), pi[key] if key else [None] * len(pi)):
-            b = block(s) if s is not None and str(s) not in ("nan", "-666", "restricted") else None
-            if b is None and k is not None and str(k) != "nan":
-                b = str(k)[:14]
-            if b:
-                out.setdefault(str(pid), b)
-    return out
-
-
-def self_check():
-    d = np.array([2.0, -1.0, 0.5])
-    m = np.zeros(3)
-    assert np.isclose(spec(-d, m, d), 1) and np.isclose(spec(d, m, d), -1) and np.isnan(spec(m, m, d)).all()
-    import tempfile
-    with tempfile.TemporaryDirectory() as td:
-        p = Path(td) / "t.gctx"
-        M = np.array([[1.0, 2, 3], [4, 5, 6]], dtype=np.float32)  # (cols, rows), as gctx stores it
-        with h5py.File(p, "w") as f:
-            f.create_dataset("0/DATA/0/matrix", data=M)
-            f.create_dataset("0/META/ROW/id", data=np.array(["7", "8", "9"], dtype="S"))
-            f.create_dataset("0/META/COL/id", data=np.array(["s1", "s2"], dtype="S"))
-        got = gctx_slice(p, ["s2", "s1"], ["9", "7"])
-        assert list(got.index) == ["s2", "s1"] and got.loc["s1", "9"] == 3 and got.loc["s2", "7"] == 4, got
+def gate(cal):
+    """BH over pairs that can pass. Status comes from q and the sign; the interval is reported, not used."""
+    cal = cal.assign(q_bh=np.nan, status=cal.get("status", "not_tested"))
+    act = cal.index[cal.n_op3 >= MIN_ACT]
+    if len(act):
+        cal.loc[act, "q_bh"] = bh(cal.loc[act, "p_one_sided"].to_numpy())
+        cal.loc[act, "status"] = np.where(cal.loc[act, "q_bh"] < 0.05, "transfers",
+                                          np.where(cal.loc[act, "ci_hi"] < 0, "inverted", "no_transfer"))
+    cal.loc[(cal.n_op3 >= MIN_REPORT) & (cal.n_op3 < MIN_ACT), "status"] = "report_only"
+    return cal
 
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("gctx", type=Path, nargs="?"); p.add_argument("meta", type=Path, nargs="?")
-    p.add_argument("out", type=Path, nargs="?")
+    p.add_argument("gctx", type=Path); p.add_argument("meta", type=Path); p.add_argument("out", type=Path)
+    p.add_argument("--de", type=Path, required=True, help="DE_all_human.csv computed on this machine")
+    p.add_argument("--op3", type=Path, required=True)
     p.add_argument("--phase", default="GSE92742", choices=list(SIG_FILES))
-    p.add_argument("--de-dir", default=None, help="study results dir holding DE_human_*.csv (strongly preferred)")
-    p.add_argument("--lines", nargs="+", default=["THP1", "U937", "NOMO1", "SKM1", "PL21", "JURKAT", "WSUDLCL2",
-                                                  "MCF7", "PC3", "A375", "HA1E"])
+    p.add_argument("--lines", nargs="+", default=DEFAULT_LINES)
+    p.add_argument("--time", type=int, default=None, help="keep only signatures at this many hours")
     p.add_argument("--seed", type=int, default=0)
-    p.add_argument("--self-check", action="store_true")
     a = p.parse_args()
-    self_check()
-    if a.self_check:
-        print("self-check ok")
-        return
-    assert a.gctx and a.meta and a.out, "need gctx, meta and out"
+    for path in (a.gctx, a.de, a.op3 / "de_train.h5ad"):
+        if not path.exists():
+            sys.exit(f"ERROR: {path} is missing; nothing was scored")
     a.out.mkdir(parents=True, exist_ok=True)
     rng = np.random.default_rng(a.seed)
 
     sig_f, gene_f = SIG_FILES[a.phase]
     sig = read(a.meta / sig_f)
-    if "pert_type" in sig:
-        sig = sig[sig.pert_type == "trt_cp"]
-    cell_c, sid = col(sig, "cell_id", "cell_iname"), col(sig, "sig_id", "distil_id")
-    sig = sig.assign(cell_key=sig[cell_c].map(norm))
-
+    sig = sig[sig.pert_type == "trt_cp"].assign(cell_key=lambda x: x[col(x, "cell_id", "cell_iname")].map(norm))
+    if a.time is not None:
+        sig = sig[sig[col(sig, "pert_time")] == a.time]
     gi = read(a.meta / gene_f)
+    is_lm = gi[col(gi, "pr_is_lm", "feature_space")].astype(str).isin(["1", "landmark", "True"])
     sym, gid = col(gi, "pr_gene_symbol", "gene_symbol"), col(gi, "pr_gene_id", "gene_id")
-    lm = col(gi, "pr_is_lm", "feature_space")
-    gi = gi.assign(is_lm=gi[lm].astype(str).isin(["1", "landmark", "True"]))
-    landmarks = set(gi[gi.is_lm][sym])
-    id_of = dict(zip(gi[sym], gi[gid].astype(str)))
+    id_of = dict(zip(gi[sym][is_lm], gi[gid][is_lm].astype(str)))
 
-    vectors = disease_vectors(a.de_dir, landmarks)
-    op3, op3_basis = op3_scores(vectors)
-    blocks = pert_blocks(a.meta)
-    pops_of = {norm(l): pops.split(", ") for pops, lines in PROXY.values() for l in lines}
-    pops_of.update({norm(l): ALL_POPS.split(", ") for l in CORE})
+    obs, Y, op3_genes = load(a.op3)
+    vectors, basis = disease_vectors(a.de, set(id_of) & set(op3_genes))
+    basis.to_csv(a.out / "disease_basis.tsv", sep="\t", index=False)
+    if not vectors:
+        sys.exit(f"ERROR: no population has {MIN_SIG} landmark genes at padj<0.05 in {a.de}\n{basis.to_string(index=False)}")
+    pd.concat([d.rename("log2fc").reset_index().assign(population=pop) for pop, d in vectors.items()]).to_csv(
+        a.out / "disease_vectors.tsv", sep="\t", index=False)
+    op3 = op3_scores(obs, Y, op3_genes, vectors)
+    blocks = pert_blocks(a.meta, PERT_FILES)
+    union = sorted({g for d in vectors.values() for g in d.index})
+    pops_of = {norm(x): pops.split(", ") for pops, xs in PROXY.values() for x in xs}
+    pops_of.update({norm(x): [pop for pop, _ in POPULATIONS.values()] for x in CORE})
+    sym_of = {id_of[g]: g for g in union}
 
     rows, calib = [], []
     for line in a.lines:
         s = sig[sig.cell_key == norm(line)]
+        pops = pops_of.get(norm(line), [])
+        tier = "core" if norm(line) in {norm(x) for x in CORE} else "immune"
         if s.empty:
-            calib.append(dict(cell_line=line, population=None, note=f"FAIL no trt_cp signatures in {a.phase}"))
+            calib += [dict(cell_line=line, population=q, tier=tier, n_op3=0, status="no_signatures") for q in pops]
             continue
-        tier = "immune" if any(norm(line) == norm(x) for _, ls in PROXY.values() for x in ls) else "core"
-        for pop in pops_of.get(norm(line), []):
-            v = vectors.get(pop)
-            if v is None:  # a lineage with no SLE signature of its own, e.g. the B lines: DE_FILES has four
-                calib.append(dict(cell_line=line, population=pop, tier=tier,
-                                  note="FAIL no SLE disease vector for this population; none was derived"))
+        sid = col(s, "sig_id")
+        Z = gctx_slice(a.gctx, s[sid].to_list(), [id_of[g] for g in union]).rename(columns=sym_of)
+        meta = s.set_index(sid).reindex(Z.index)
+        prof, n_sig = Z.groupby(meta.pert_iname.to_numpy()).median(), Z.groupby(meta.pert_iname.to_numpy()).size()
+        blk = meta.groupby("pert_iname").pert_id.first().astype(str).map(blocks).reindex(prof.index)
+        dose = float(meta[col(meta, "pert_dose")].median()) if col(meta, "pert_dose") else np.nan
+        for pop in pops:
+            if pop not in vectors:
+                calib.append(dict(cell_line=line, population=pop, tier=tier, n_op3=0, status="too_few_de_genes"))
                 continue
-            d = v["d"][[g for g in v["d"].index if g in id_of]]
-            if len(d) < MIN_SIG:
-                calib.append(dict(cell_line=line, population=pop, tier=tier, genes_basis=v["basis"],
-                                  note=f"FAIL only {len(d)} basis genes are in L1000; not scored"))
-                continue
-            Z = gctx_slice(a.gctx, s[sid].to_list(), [id_of[g] for g in d.index])
-            sym_of = {id_of[g]: g for g in d.index}
-            Z.columns = [sym_of[c] for c in Z.columns]
-            d = d[Z.columns]
-            name = s.set_index(sid).pert_iname.reindex(Z.index)
-            pid = s.set_index(sid).pert_id.reindex(Z.index) if "pert_id" in s else name
-            prof = Z.groupby(name.to_numpy()).median()          # over doses and times
-            n_sig = Z.groupby(name.to_numpy()).size()
-            blk = pd.Series(pid.to_numpy(), name.to_numpy()).groupby(level=0).first().map(blocks)
-            X = prof.to_numpy()
+            d = vectors[pop]
+            X = prof[d.index].to_numpy()
             res = pd.DataFrame(dict(population=pop, cell_line=line, tier=tier, phase=a.phase, sm_name=prof.index,
-                                    inchikey_block=blk.reindex(prof.index).to_numpy(),
-                                    specific_reversal=spec(X, np.median(X, 0), d.to_numpy()),
-                                    signatures=n_sig.to_numpy(), genes_scored=len(d), genes_basis=v["basis"],
-                                    evidence=f"measured_{line}"))
+                                    inchikey_block=blk.to_numpy(), specific_reversal=spec(X, np.median(X, 0), d.to_numpy()),
+                                    signatures=n_sig.to_numpy(), genes_scored=len(d), evidence=f"measured_{line}"))
             res["specific_rank"] = res.specific_reversal.rank(ascending=False, method="min")
+            res["compounds_in_context"] = len(res)
             rows.append(res)
-            o = op3[pop]
-            k = res.dropna(subset=["inchikey_block"]).drop_duplicates("inchikey_block").set_index("inchikey_block")
-            both = k.index.intersection(o.index)
-            if len(both) >= MIN_OVERLAP:
-                x, y = k.specific_reversal[both].to_numpy(), o[both].to_numpy()
-                lo, hi = interval(x, y, rng)
-                calib.append(dict(cell_line=line, population=pop, tier=tier, op3_overlap=len(both),
-                                  spearman_vs_op3=round(float(spearmanr(x, y).statistic), 3),
-                                  ci_lo=round(lo, 3), ci_hi=round(hi, 3), compounds_added=len(res),
-                                  genes_basis=v["basis"],
-                                  note="transfers" if lo > 0 else "FAIL CI includes zero; do not rank beside OP3"))
-            else:
-                calib.append(dict(cell_line=line, population=pop, tier=tier, op3_overlap=len(both),
-                                  compounds_added=len(res), genes_basis=v["basis"],
-                                  note=f"FAIL fewer than {MIN_OVERLAP} shared OP3 compounds; no calibration"))
+            k = res.dropna(subset=["inchikey_block", "specific_reversal"]).groupby("inchikey_block").specific_reversal.mean()
+            both = k.index.intersection(op3[pop].index)
+            row = dict(cell_line=line, population=pop, tier=tier, n_op3=len(both), compounds_scored=len(res),
+                       genes=len(d), median_dose=dose, signatures=len(s))
+            if len(both) >= MIN_REPORT:
+                x, y = k[both].to_numpy(), op3[pop][both].to_numpy()
+                row["spearman_vs_op3"] = round(float(spearmanr(x, y).statistic), 3)
+                row["ci_lo"], row["ci_hi"] = (round(v, 3) for v in interval(x, y, rng))
+                row["p_one_sided"] = float(spearmanr(x, y, alternative="greater").pvalue)
+            calib.append(row)
     res = pd.concat(rows, ignore_index=True) if rows else pd.DataFrame()
-    cal = pd.DataFrame(calib)
-    res.to_csv(a.out / "lincs_rescue.tsv", sep="\t", index=False, float_format="%.4f")
-    cal.to_csv(a.out / "calibration.tsv", sep="\t", index=False)
+    cal = gate(pd.DataFrame(calib))
     ctx = context_agreement(res, rng)
+    passed = cal[cal.status == "transfers"]
+    keep = res.merge(passed[["cell_line", "population"]], on=["cell_line", "population"]) if len(passed) and len(res) else res.iloc[:0]
+    ctrl = res[res.sm_name.str.contains(CONTROLS)] if len(res) else res
+    ctrl = ctrl.assign(percentile=(100 * ctrl.specific_rank / ctrl.compounds_in_context).round(1))
+    res.to_csv(a.out / "lincs_rescue.tsv", sep="\t", index=False, float_format="%.4f")
+    keep.to_csv(a.out / "passing_pairs.tsv", sep="\t", index=False, float_format="%.4f")
+    cal.to_csv(a.out / "calibration.tsv", sep="\t", index=False)
     ctx.to_csv(a.out / "context_agreement.tsv", sep="\t", index=False)
-    passed = cal[cal.note.astype(str).eq("transfers")] if len(cal) else cal
-    out = [f"LINCS {a.phase}: scored {0 if res.empty else res.sm_name.nunique()} distinct compounds across "
-           f"{0 if res.empty else res.cell_line.nunique()} cell line(s); OP3 contributes 140 in real PBMCs.",
-           "Disease-vector basis: " + "; ".join(f"{k}: {v['basis']}" for k, v in vectors.items()),
-           "OP3 side: " + "; ".join(f"{k}: {v}" for k, v in op3_basis.items()), "", cal.to_string(index=False), ""]
-    for _, r in cal.iterrows():
-        out.append(f"  [{'ok' if r.get('note') == 'transfers' else 'FAIL'}] {r.get('tier')} {r.cell_line} -> "
-                   f"{r.population}: {r.get('note')}")
-    if len(ctx):
-        out += ["Immune line vs core line on the compounds they share (internal control, not evidence about real "
-                "monocytes):", ctx.to_string(index=False), ""]
-    usable = 0 if res.empty or passed.empty else res.merge(
-        passed[["cell_line", "population"]], on=["cell_line", "population"]).sm_name.nunique()
-    out += ["", f"Usable expansion: {len(passed)} line-population pair(s), {usable} distinct compounds whose ranking "
-                "is calibrated against real PBMCs. Compounds from a FAILed pair stay in lincs_rescue.tsv with their "
-                "evidence tag and must not be pooled into a ranking with OP3.",
-            "L1000 z-scores are not log2FC, so only the rank of specific_reversal is comparable to OP3; the "
-            "match-to-healthy value is not computed for these rows.",
-            "A 'signature_FALLBACK' basis means the DE table was missing and the score rests on genes L1000 "
-            "inferred from its 978 landmarks; rerun with --de-dir before using those numbers."]
+    ctrl.drop(columns=["inchikey_block", "evidence", "phase"]).to_csv(a.out / "controls.tsv", sep="\t", index=False, float_format="%.4f")
+
+    git = lambda *c: subprocess.run(["git", "-C", str(ROOT), *c], capture_output=True, text=True).stdout.strip()  # noqa: E731
+    head = (f"REAL RUN {a.phase}, time {a.time or 'all'} h, DE {a.de}; commit {git('rev-parse', '--short', 'HEAD')}; "
+            f"{len(git('status', '--porcelain').splitlines())} changed files; host {socket.gethostname()}; seed {a.seed}")
+    show = ["cell_line", "population", "tier", "n_op3", "compounds_scored", "genes", "median_dose", "spearman_vs_op3",
+            "ci_lo", "ci_hi", "q_bh", "status"]
+    tested = int((cal.n_op3 >= MIN_ACT).sum())
+    out = [head, "", "Disease basis (landmarks shared with OP3, padj<0.05 needs at least " f"{MIN_SIG}):", basis.to_string(index=False), "",
+           cal.reindex(columns=show).round(4).to_string(index=False), "",
+           f"BH family: {tested} pairs with at least {MIN_ACT} shared compounds. Status: " + ", ".join(
+               f"{k} {v}" for k, v in cal.status.value_counts().items()),
+           f"Pairs passing: {len(passed)}; compounds in those lines: {keep.sm_name.nunique() if len(keep) else 0}. "
+           "These are candidates in a line that passed, not validated PBMC measurements.",
+           "Controls are recorded, not a gate, in controls.tsv. Only ranks are comparable with OP3.", head]
     (a.out / "run_summary.txt").write_text("\n".join(out) + "\n")
     print("\n".join(out))
 

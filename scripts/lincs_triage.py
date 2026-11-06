@@ -9,7 +9,7 @@ Reads only LINCS metadata (sig_info, pert_info, gene_info). Answers, before any 
                Admissible only with a measured transfer calibration, never on the assumption that a drug acts
                the same in a melanoma line as in a monocyte.
   2. How many of the 140 OP3 compounds each line holds. Matching is by InChIKey connectivity block of the
-     largest fragment, as in lupus_use.py: OP3's sm_lincs_id is an LSM id, not a BRD id, so id matching found
+     largest fragment, as in lupus_use.py: OP3's sm_lincs_id values do not start with BRD, so id matching found
      nothing, and name matching misses aliases (GLPG0634 / filgotinib). Those compounds are the calibration set.
   3. How many SLE signature genes L1000 measured directly (landmark, 978 of 12,328) rather than inferred from
      the landmarks. An inferred gene is a linear model's output; scoring an interferon signature on inferred
@@ -41,13 +41,13 @@ PROXY = {
     "myeloid": ("Classical mono, Non-classical mono",
                 ["THP1", "HL60", "U937", "NOMO1", "PL21", "SKM1", "MONOMAC6", "OCIAML2", "OCIAML3", "EOL1",
                  "MV411", "KASUMI1", "HEL", "K562", "HAP1"]),
-    "T": ("CD4 T", ["JURKAT", "CCRFCEM", "MOLT4", "HUT78", "SUPT1"]),
-    "B": ("B cells", ["RAJI", "RAMOS", "DAUDI", "GRANTA519", "MINO", "JEKO1", "SUDHL4", "TOLEDO", "WSUDLCL2",
+    "T": ("CD4 T, CD8 T", ["JURKAT", "CCRFCEM", "MOLT4", "HUT78", "SUPT1"]),
+    "B": ("B", ["RAJI", "RAMOS", "DAUDI", "GRANTA519", "MINO", "JEKO1", "SUDHL4", "TOLEDO", "WSUDLCL2",
                       "RPMI8226", "MM1S", "U266", "NCIH929", "KMS11", "L363", "OPM2"]),
     "NK": ("NK", ["NK92", "KHYG1", "YT"]),
 }
 CORE = ["A375", "A549", "HA1E", "HCC515", "HEPG2", "HT29", "MCF7", "PC3", "VCAP", "HEK293T", "NPC", "MCF10A"]
-ALL_POPS = "Classical mono, Non-classical mono, NK, CD4 T"
+ALL_POPS = "Classical mono, Non-classical mono, NK, CD4 T, CD8 T, B"
 # Pre-registered bands, fixed before any count was seen: at n = 50 a true Spearman near 0.3 is distinguishable
 # from zero, at n = 20 only a strong one is, below that nothing is.
 MIN_OP3_ACT, MIN_OP3_REPORT = 50, 20
