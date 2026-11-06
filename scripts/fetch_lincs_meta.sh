@@ -20,6 +20,7 @@ files=(
 )
 for u in "${files[@]}"; do
   f="$out/$(basename "$u")"
+  if gzip -t "$f" 2>/dev/null; then echo "complete: $f"; continue; fi
   curl -fL -C - --retry 3 -o "$f" "$u"
   gzip -t "$f"   # content test: a truncated or HTML error page fails here, not three steps later
 done
