@@ -248,7 +248,11 @@ def main():
             continue
         tier = "immune" if any(norm(line) == norm(x) for _, ls in PROXY.values() for x in ls) else "core"
         for pop in pops_of.get(norm(line), []):
-            v = vectors[pop]
+            v = vectors.get(pop)
+            if v is None:  # a lineage with no SLE signature of its own, e.g. the B lines: DE_FILES has four
+                calib.append(dict(cell_line=line, population=pop, tier=tier,
+                                  note="FAIL no SLE disease vector for this population; none was derived"))
+                continue
             d = v["d"][[g for g in v["d"].index if g in id_of]]
             if len(d) < MIN_SIG:
                 calib.append(dict(cell_line=line, population=pop, tier=tier, genes_basis=v["basis"],
