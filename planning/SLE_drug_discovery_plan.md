@@ -96,6 +96,43 @@ Replicate first, pool later. Run with `scripts/run_expansion.sh`; nothing here h
 
 **Pooling** with `~ study + condition` waits until single-cohort replication is read. **UCE** waits too: 408k cells would take about 5 days at the measured 0.93 cells/s (**Inferred**), and marker labels should be tested first. **Not done:** healthy-vs-healthy negative control; sex and treatment are not adjusted for because GEO lacks them.
 
+## Compound expansion (planned 2026-11-06)
+
+140 compounds is the binding limit on the drug side, not the cell side. Two measurements decide *how* to widen it:
+
+- **Structure cannot fill the gap.** `scripts/op3_nn_rescue_check.py`: hold out each OP3 compound, predict its
+  profile from the structurally nearest other compound, and the measured rescue rank is recovered at Spearman
+  0.15 (CI −0.01 to 0.32) in classical monocytes, 0.05 in CD4 T, 0.33 in NK; 2–4 of the true top 10. Filgotinib
+  moves from rank 11 to 88, methotrexate from 129 to 32, and prednisolone and mometasone swap because each is
+  the other's nearest neighbour. Above Tanimoto 0.4 it reaches 0.63, but only 15 of 135 compounds are there.
+  Consistent with Stage P (ridge `r_resid` 0.048). **Imputed rows would be noise that renders like data.**
+- **A measured profile transfers.** The same compound measured in a different OP3 cell type predicts its rescue
+  rank at Spearman ≈ 0.30 (CI 0.13–0.46), about twice the structure route, with no held-out chemistry
+  (**Known**, within healthy PBMCs, so an optimistic bound for a cell line).
+
+So the compound axis grows with **measured** signatures from LINCS L1000 (~20k compounds, 248 lines), prioritised
+on PBMC by using each population's nearest haematopoietic line, and with the 140 OP3 compounds as the calibration
+set — OP3 chose its compounds for being in CMap, so the overlap exists by construction.
+
+| Step | Script | Cost | Gate |
+|---|---|---|---|
+| 1 | `fetch_lincs_meta.sh` | ~15 MB | — |
+| 2 | `lincs_triage.py` | minutes | ≥50 OP3 compounds in a line, ≥50 % of signature genes in L1000 |
+| 3 | `fetch_lincs_level5.sh phase2` (5.0 GB gz, ~5.8 GB) or `phase1` (20 GB gz, ~23 GB) | download | gctx opens with the three expected datasets |
+| 4 | `lincs_rescue.py` | minutes | Spearman vs OP3 in that population, CI above zero |
+
+**Lineage proxies, by cell origin rather than a similarity score:** myeloid → THP1, HL60, U937, NOMO1, PL21 and
+related; CD4 T → JURKAT, CCRFCEM, MOLT4; B → RAJI, RAMOS and myeloma lines; NK → NK92, KHYG1, YT, which LINCS
+probably lacks (**Guess**, step 2 settles it). A monocytic leukaemia line is the nearest available thing to a
+monocyte, not a monocyte.
+
+**Scoring is scale-free** (cosine of the compound-specific part against the disease vector): L1000 z-scores are
+not log2FC, so the match-to-healthy value is not computed for LINCS rows and only ranks are comparable. Each row
+carries its evidence tag (`measured_<line>` vs OP3's `measured`) and the landmark/inferred gene split, since
+L1000 infers most of the 12,328 genes from 978. **A line whose calibration CI includes zero is reported and not
+pooled.** Tested end to end on a synthetic fixture with a planted failure (a faithful line calibrates, a random
+one fails, a thin one is refused); nothing has run on real LINCS data.
+
 ## Current SLE therapeutics
 
 These are the positive-control candidates. Only small molecules can be scored by

@@ -32,3 +32,6 @@ pipeline/UCE/
 __pycache__/
 shared/gse135779/
 analysis/expansion_*/
+shared/lincs/
+analysis/lincs_*/
+analysis/op3_expand/
